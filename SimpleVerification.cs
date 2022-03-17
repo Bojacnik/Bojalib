@@ -20,7 +20,7 @@ namespace Bojalib
                 }
 
                 /// <summary>
-                /// Returns DialogResult.OK if verification was successful, otherwise returns DialogResult.No 
+                /// Compares encrypted password in Verification.Password to input. Returns DialogResult.OK if verification was successful, otherwise returns DialogResult.No 
                 /// </summary>
                 /// <param name="sender"></param>
                 /// <param name="e"></param>

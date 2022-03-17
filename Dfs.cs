@@ -1,5 +1,5 @@
 ﻿using Bojalib.Collections;
-using System;
+using System.Collections.Generic;
 
 namespace Bojalib
 {
@@ -12,12 +12,17 @@ namespace Bojalib
                 if (g.Root != null) traverse(g.Root);
             }
 
-            private static void traverse(Node<T> n)
+            private static List<T> traverse(Node<T> n)
             {
-                Console.WriteLine(n.Data);
+                List<T> output = new List<T>();
                 foreach (Node<T> node in n.Children)
+                {
                     traverse(node);
+                }
+                return output;
+
             }
+
         }
     }
 }

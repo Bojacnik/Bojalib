@@ -16,8 +16,17 @@ namespace Bojalib
                     get => passwd;
                     set
                     {
-                        passwd = value;
+                        if (Encryption)
+                            passwd = Verification.HashPassword(value);
+                        else passwd = value;
                     }
+                }
+
+                private static bool encryption;
+                public static bool Encryption
+                {
+                    get => encryption;
+                    set => encryption = value;
                 }
 
                 /// <summary>
