@@ -77,11 +77,10 @@ namespace Bojalib
                     this.Controls.Add(this.btnVerify);
                     this.MaximizeBox = false;
                     this.MinimizeBox = false;
-                    this.Name = "Verification";
+                    this.Name = "SimpleVerification";
                     this.ShowIcon = false;
                     this.Text = "Verification";
                     this.TopMost = true;
-                    this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.SimpleVerification_FormClosing);
                     this.ResumeLayout(false);
                     this.PerformLayout();
 
