@@ -45,7 +45,7 @@ namespace Bojalib
                     this.btnVerify.Location = new System.Drawing.Point(214, 6);
                     this.btnVerify.Name = "btnVerify";
                     this.btnVerify.Size = new System.Drawing.Size(75, 23);
-                    this.btnVerify.TabIndex = 4;
+                    this.btnVerify.TabIndex = 1;
                     this.btnVerify.Text = "Verify";
                     this.btnVerify.UseVisualStyleBackColor = true;
                     this.btnVerify.Click += new System.EventHandler(this.btnVerify_Click);
@@ -56,7 +56,7 @@ namespace Bojalib
                     this.tbPassw.Name = "tbPassw";
                     this.tbPassw.PasswordChar = '*';
                     this.tbPassw.Size = new System.Drawing.Size(130, 23);
-                    this.tbPassw.TabIndex = 5;
+                    this.tbPassw.TabIndex = 0;
                     // 
                     // lblPassw
                     // 
@@ -64,7 +64,7 @@ namespace Bojalib
                     this.lblPassw.Location = new System.Drawing.Point(12, 10);
                     this.lblPassw.Name = "lblPassw";
                     this.lblPassw.Size = new System.Drawing.Size(60, 15);
-                    this.lblPassw.TabIndex = 6;
+                    this.lblPassw.TabIndex = 2;
                     this.lblPassw.Text = "Password:";
                     // 
                     // Verification

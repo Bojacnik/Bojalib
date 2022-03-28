@@ -56,18 +56,18 @@ namespace Bojalib
                     this.btnRegister.Location = new System.Drawing.Point(13, 114);
                     this.btnRegister.Name = "btnRegister";
                     this.btnRegister.Size = new System.Drawing.Size(245, 23);
-                    this.btnRegister.TabIndex = 1;
+                    this.btnRegister.TabIndex = 2;
                     this.btnRegister.Text = "Register";
                     this.btnRegister.UseVisualStyleBackColor = false;
                     this.btnRegister.Click += new System.EventHandler(this.btnRegister_Click);
                     // 
                     // tbConfirmPassword
                     // 
-                    this.tbConfirmPassword.Location = new System.Drawing.Point(12, 76);
+                    this.tbConfirmPassword.Location = new System.Drawing.Point(12, 80);
                     this.tbConfirmPassword.Name = "tbConfirmPassword";
                     this.tbConfirmPassword.PasswordChar = '*';
                     this.tbConfirmPassword.Size = new System.Drawing.Size(246, 23);
-                    this.tbConfirmPassword.TabIndex = 2;
+                    this.tbConfirmPassword.TabIndex = 1;
                     // 
                     // label1
                     // 
