@@ -15,17 +15,35 @@ namespace Bojalib
                     get => globalPassword;
                     set
                     {
-                        if (GlobalEncryption)
+                        if (IsGlobalEncrypted)
                             globalPassword = Verification.HashPassword(value);
                         else globalPassword = value;
                     }
                 }
 
-                private static bool globalEncryption;
-                public static bool GlobalEncryption
+                private static bool isGlobalEncrypte;
+                public static bool IsGlobalEncrypted
                 {
-                    get => globalEncryption;
-                    set => globalEncryption = value;
+                    get => isGlobalEncrypte;
+                    set => isGlobalEncrypte = value;
+                }
+
+                private string localPassword;
+                public string LocalPassword
+                {
+                    get => localPassword;
+                    set
+                    {
+                        if (IsLocalEncrypted)
+                            localPassword = Verification.HashPassword(value);
+                        else localPassword = value;
+                    }
+                }
+                private bool isLocalEncrypted;
+                public bool IsLocalEncrypted
+                {
+                    get => isLocalEncrypted;
+                    init => isLocalEncrypted = value;
                 }
 
                 /// <summary>
@@ -61,24 +79,6 @@ namespace Bojalib
 
                     ha.Dispose();
                     return sb.ToString();
-                }
-
-                private string password;
-                public string Password
-                {
-                    get => password;
-                    set
-                    {
-                        if (Encryption)
-                            password = Verification.HashPassword(value);
-                        else password = value;
-                    }
-                }
-                private bool encryption;
-                public bool Encryption
-                {
-                    get => encryption;
-                    set => encryption = value;
                 }
 
             }

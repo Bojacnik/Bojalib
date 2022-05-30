@@ -2,8 +2,19 @@
 
   <PropertyGroup>
 	<OutputType>Library</OutputType>
-      <TargetFramework>net5.0-windows</TargetFramework>
+      <TargetFramework>net6.0-windows10.0.22000.0</TargetFramework>
       <UseWindowsForms>true</UseWindowsForms>
+      <SupportedOSPlatformVersion>7.0</SupportedOSPlatformVersion>
+      <AssemblyName>$(MSBuildProjectName)</AssemblyName>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <Optimize>True</Optimize>
+    <WarningLevel>0</WarningLevel>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <WarningLevel>0</WarningLevel>
   </PropertyGroup>
 
 

@@ -33,7 +33,7 @@ namespace Bojalib
                     
                     
                     {
-                        if (v.Password == Verification.HashPassword(this.tbPassw.Text))
+                        if (v.LocalPassword == Verification.HashPassword(this.tbPassw.Text))
                         {
                             this.DialogResult = DialogResult.OK;
                         }
