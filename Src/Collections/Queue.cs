@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Bojalib
+namespace Bojalib.Collections
 {
     namespace Collections
     {

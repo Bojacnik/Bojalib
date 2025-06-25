@@ -17,5 +17,9 @@
     <WarningLevel>0</WarningLevel>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Folder Include="Src\" />
+  </ItemGroup>
+
 
 </Project>
