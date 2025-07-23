@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Bojalib.Sorting;
+namespace Bojalib.Core.Sorting;
 
 public static class Quicksort
 {

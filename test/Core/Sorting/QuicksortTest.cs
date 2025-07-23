@@ -1,11 +1,13 @@
 ﻿using System.Linq;
 using FluentAssertions;
+using Bojalib.Core.Sorting;
 
-namespace Core;
+namespace Core.Sorting;
 
-public class Tests
+public class QuicksortTest
 {
     private int[] _array;
+
     [SetUp]
     public void Setup()
     {
@@ -19,11 +21,10 @@ public class Tests
         int[] expected = [0, 1, 2, 2, 3, 3, 7, 20, 5236236];
 
         // Act
-        Bojalib.Sorting.Quicksort.Sort(_array);
-        
+        Quicksort.Sort(_array);
+
         // Assert
         bool result = _array.SequenceEqual(expected);
-
         result.Should().Be(true);
     }
 }

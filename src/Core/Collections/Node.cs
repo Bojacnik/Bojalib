@@ -2,7 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 
-namespace Bojalib.Collections;
+namespace Bojalib.Core.Collections;
 
 public class Node<TData> : IEqualityComparer<Node<TData>>, IComparable<Node<TData>>, IEnumerable<Node<TData>>
     where TData : class, IEquatable<TData>, IComparable<TData>

@@ -1,7 +1,6 @@
-﻿using System;
-using Bojalib.Collections.Exceptions;
+﻿using Bojalib.Collections.Exceptions;
 
-namespace Bojalib.Collections;
+namespace Bojalib.Core.Collections;
 
 public class Stack<TData>
 {
