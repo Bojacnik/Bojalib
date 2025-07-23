@@ -28,7 +28,8 @@ public static class Quicksort
                     i++;
                     comparison = pole[i].CompareTo(pivot);
                 }
-                
+
+                comparison = pole[j].CompareTo(pivot);
                 while (comparison == 1)
                 {
                     j--;
