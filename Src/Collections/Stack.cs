@@ -1,38 +1,39 @@
 ﻿using System;
+using Bojalib.Collections.Exceptions;
 
 namespace Bojalib.Collections;
 
-public class Stack<T>
+public class Stack<TData>
 {
     public Stack()
     {
     }
 
-    private class Data
+    private class StackItem
     {
-        public readonly Data Behind;
-        public readonly T Value;
+        public readonly StackItem Behind;
+        public readonly TData Value;
 
-        public Data(T value, Data behind = null)
+        public StackItem(TData value, StackItem behind = null)
         {
-            this.Value = value;
+            Value = value;
             Behind = behind;
         }
     }
 
-    private Data _head;
+    private StackItem _head;
 
 
-    public void Push(T data)
+    public void Push(TData data)
     {
-        _head = new Data(data, _head);
+        _head = new StackItem(data, _head);
     }
 
-    public T Pop()
+    public TData Pop()
     {
-        if (_head == null) throw new Exception("Stack is empty!");
+        if (_head == null) throw new StackEmptyException();
 
-        Data tmp = _head;
+        StackItem tmp = _head;
         _head = tmp.Behind;
         return tmp.Value;
     }

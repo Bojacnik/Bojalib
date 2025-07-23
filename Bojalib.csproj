@@ -2,9 +2,8 @@
 
   <PropertyGroup>
 	<OutputType>Library</OutputType>
-      <TargetFramework>net6.0-windows10.0.22000.0</TargetFramework>
-      <UseWindowsForms>true</UseWindowsForms>
-      <SupportedOSPlatformVersion>7.0</SupportedOSPlatformVersion>
+      <TargetFramework>net9.0</TargetFramework>
+      <LangVersion>13</LangVersion>
       <AssemblyName>$(MSBuildProjectName)</AssemblyName>
   </PropertyGroup>
 
@@ -19,6 +18,10 @@
 
   <ItemGroup>
     <Folder Include="Src\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="JetBrains.Annotations" Version="2025.2.0" />
   </ItemGroup>
 
 
