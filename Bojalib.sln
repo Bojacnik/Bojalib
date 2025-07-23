@@ -1,11 +1,10 @@
-﻿
-Microsoft Visual Studio Solution File, Format Version 12.00
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.31911.196
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "src\Bojalib", "Bojalib.csproj", "{25208703-975C-4B6F-A8C2-67C4812B403A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "src\Core\", "Bojalib.Core.csproj", "{25208703-975C-4B6F-A8C2-67C4812B403A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "test\BojalibTests", "BojalibTests\BojalibTests.csproj", "{CB1D88A8-47B8-4A3A-BAF1-BBE3F5E4B055}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "test\Core\", "Bojalib.Tests.Core.csproj", "{CB1D88A8-47B8-4A3A-BAF1-BBE3F5E4B055}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
