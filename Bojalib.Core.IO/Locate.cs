@@ -1,8 +1,4 @@
-﻿using System.IO;
-using System.Linq;
-using System.Collections.Generic;
-
-namespace Bojalib.Core.IO;
+﻿namespace Bojalib.Core.IO;
 
 public static class Locate
 {

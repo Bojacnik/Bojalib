@@ -22,7 +22,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\src\Core\Bojalib.Core.csproj" />
+      <ProjectReference Include="..\..\Bojalib.Core.Sorting\Bojalib.Core.Sorting.csproj" />
     </ItemGroup>
 
 </Project>

@@ -1,31 +1,28 @@
-﻿using Bojalib.Collections.Exceptions;
+﻿using Bojalib.Core.Collections.Generic.Exceptions;
 
-namespace Bojalib.Core.Collections;
+namespace Bojalib.Core.Collections.Generic;
 
 public class Stack<TData>
 {
-    public Stack()
-    {
-    }
-
     private class StackItem
     {
-        public readonly StackItem Behind;
+        public readonly StackItem? Behind;
         public readonly TData Value;
 
-        public StackItem(TData value, StackItem behind = null)
+        public StackItem(TData value, StackItem? behind = null)
         {
             Value = value;
             Behind = behind;
         }
     }
 
-    private StackItem _head;
+    private StackItem? _head;
 
 
     public void Push(TData data)
     {
-        _head = new StackItem(data, _head);
+        if (_head != null) 
+            _head = new StackItem(data, _head);
     }
 
     public TData Pop()

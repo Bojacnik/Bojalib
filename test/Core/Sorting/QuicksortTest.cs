@@ -1,6 +1,6 @@
 ﻿using System.Linq;
 using FluentAssertions;
-using Bojalib.Core.Sorting;
+using Bojalib.Core.Sorting.Sorting;
 
 namespace Core.Sorting;
 

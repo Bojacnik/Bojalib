@@ -1,18 +1,17 @@
 ﻿using System.Collections;
-using System.Collections.Generic;
-using Bojalib.Collections.Exceptions;
+using Bojalib.Core.Collections.Generic.Exceptions;
 
-namespace Bojalib.Core.Collections;
+namespace Bojalib.Core.Collections.Generic;
 
 public class CustomQueue<TData> : IEnumerable<TData>
 {
-    private CustomQueueItem _front;
-    private CustomQueueItem _end;
+    private CustomQueueItem? _front;
+    private CustomQueueItem? _end;
 
     private class CustomQueueItem
     {
-        public TData Data;
-        public CustomQueueItem Next;
+        public required TData Data;
+        public CustomQueueItem? Next;
     }
 
     public TData Dequeue()
@@ -29,9 +28,9 @@ public class CustomQueue<TData> : IEnumerable<TData>
 
     public void Enqueue(TData item)
     {
-        CustomQueueItem newItem = new CustomQueueItem
+        CustomQueueItem? newItem = new CustomQueueItem
         {
-            Data = item
+            Data = item,
         };
 
         _front ??= newItem;
@@ -51,7 +50,7 @@ public class CustomQueue<TData> : IEnumerable<TData>
 
     public IEnumerator<TData> GetEnumerator()
     {
-        CustomQueueItem current = _front;
+        CustomQueueItem? current = _front;
         while (current is not null)
         {
             yield return current.Data;

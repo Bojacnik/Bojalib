@@ -1,14 +1,12 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections;
 
-namespace Bojalib.Core.Collections;
+namespace Bojalib.Core.Collections.Generic;
 
 public class Node<TData> : IEqualityComparer<Node<TData>>, IComparable<Node<TData>>, IEnumerable<Node<TData>>
     where TData : class, IEquatable<TData>, IComparable<TData>
 {
-    public TData Data { get; init; }
-    public List<Node<TData>> Children { get; init; }
+    public required TData Data { get; init; }
+    public required List<Node<TData>> Children { get; init; }
 
     public Node()
     {
@@ -21,7 +19,7 @@ public class Node<TData> : IEqualityComparer<Node<TData>>, IComparable<Node<TDat
         Children.AddRange(children);
     }
 
-    public bool Equals(Node<TData> x, Node<TData> y)
+    public bool Equals(Node<TData>? x, Node<TData>? y)
     {
         return x != null && y != null && x.Data.Equals(y.Data) && x.Children.Equals(y.Children);
     }
@@ -31,9 +29,9 @@ public class Node<TData> : IEqualityComparer<Node<TData>>, IComparable<Node<TDat
         return HashCode.Combine(obj.Data, obj.Children);
     }
 
-    public int CompareTo(Node<TData> other)
+    public int CompareTo(Node<TData>? other)
     {
-        return Data.CompareTo(other.Data);
+        return Data.CompareTo(other?.Data);
     }
 
     public IEnumerator<Node<TData>> GetEnumerator()

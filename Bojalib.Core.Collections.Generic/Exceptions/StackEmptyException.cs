@@ -1,5 +1,3 @@
-﻿using System;
-
-namespace Bojalib.Collections.Exceptions;
+﻿namespace Bojalib.Core.Collections.Generic.Exceptions;
 
 public class StackEmptyException() : Exception("Stack is empty!");
