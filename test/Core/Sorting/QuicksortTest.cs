@@ -1,8 +1,8 @@
 ﻿using System.Linq;
-using FluentAssertions;
 using Bojalib.Core.Sorting.Sorting;
+using FluentAssertions;
 
-namespace Core.Sorting;
+namespace Bojalib.Tests.Sorting;
 
 public class QuicksortTest
 {
