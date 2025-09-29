@@ -28,7 +28,7 @@ public class CustomQueue<TData> : IEnumerable<TData>
 
     public void Enqueue(TData item)
     {
-        CustomQueueItem? newItem = new CustomQueueItem
+        CustomQueueItem? newItem = new()
         {
             Data = item,
         };

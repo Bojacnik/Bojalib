@@ -1,8 +1,6 @@
 ﻿namespace Bojalib.Core.Collections.Generic;
 
-using System.Linq;
-
-public record TrieNode<TData>()
+public record TrieNode<TData>
 {
     public TData? Data;
     public required Dictionary<char, TrieNode<TData>> Children { get; init; }
@@ -22,7 +20,7 @@ public record TrieTree<TData>
     {
         TrieNode<TData> current = Root;
 
-        for (var i = 0; i < word.Length; i++)
+        for (int i = 0; i < word.Length; i++)
         {
             char letter = word[i];
 
@@ -48,7 +46,7 @@ public record TrieTree<TData>
     {
         TrieNode<TData> current = Root;
 
-        for (var i = 0; i < word.Length; i++)
+        for (int i = 0; i < word.Length; i++)
         {
             char letter = word[i];
 
@@ -66,5 +64,5 @@ public record TrieTree<TData>
         return default;
     }
 
-    private TrieNode<TData> Root { get; init; }
+    private TrieNode<TData> Root { get; }
 }
