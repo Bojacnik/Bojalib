@@ -14,7 +14,7 @@ public enum Token
 
 public class TrieTreeTest
 {
-    private readonly TrieTree<Token> _tree = new TrieTree<Token>();
+    private readonly TrieTree<Token> _tree = new();
 
     [Test]
     public void InsertAndFindWordTest()
