@@ -34,7 +34,6 @@
         <ProjectReference Include="..\..\src\Bojalib.Core.Collections\Bojalib.Core.Collections.csproj"/>
         <ProjectReference Include="..\..\src\Bojalib.Core.Collections.Generic\Bojalib.Core.Collections.Generic.csproj"/>
         <ProjectReference Include="..\..\src\Bojalib.Core.Sorting\Bojalib.Core.Sorting.csproj"/>
-        <ProjectReference Include="..\..\test\Bojalib.Tests.Core\Bojalib.Tests.Core.csproj"/>
     </ItemGroup>
 
 </Project>
