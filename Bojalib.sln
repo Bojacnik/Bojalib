@@ -6,11 +6,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bojalib.Core", "src\Bojalib
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bojalib.Core.IO", "src\Bojalib.Core.IO\Bojalib.Core.IO.csproj", "{77AF7730-7804-44A7-8076-59E5DDF30F9D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bojalib.Core.Collections", "src\Bojalib.Core.Collections\Bojalib.Core.Collections.csproj", "{148D6B77-B1E2-4C4F-B439-77121C81B649}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bojalib.Core.Collections.Generic", "src\Bojalib.Core.Collections.Generic\Bojalib.Core.Collections.Generic.csproj", "{B27493C6-7AFC-4D99-BD93-274CD865577E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bojalib.Core.Sorting", "src\Bojalib.Core.Sorting\Bojalib.Core.Sorting.csproj", "{62C8ECD4-180E-4E43-85F3-C1049B523108}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bojalib.Core.Collections", "src\Bojalib.Core.Collections\Bojalib.Core.Collections.csproj", "{148D6B77-B1E2-4C4F-B439-77121C81B649}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bojalib.Tests.Core", "test\Bojalib.Tests.Core\Bojalib.Tests.Core.csproj", "{0A0CDA0E-E586-4E3F-8A1E-6D831611DF74}"
 EndProject
