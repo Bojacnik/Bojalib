@@ -22,8 +22,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\Bojalib.Core.Collections.Generic\Bojalib.Core.Collections.Generic.csproj" />
-      <ProjectReference Include="..\..\Bojalib.Core.Sorting\Bojalib.Core.Sorting.csproj" />
       <ProjectReference Include="..\..\src\Bojalib.Core.Collections.Generic\Bojalib.Core.Collections.Generic.csproj" />
       <ProjectReference Include="..\..\src\Bojalib.Core.Sorting\Bojalib.Core.Sorting.csproj" />
     </ItemGroup>
