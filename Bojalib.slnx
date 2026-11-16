@@ -3,17 +3,21 @@
     <File Path=".editorconfig" />
     <File Path=".gitattributes" />
     <File Path=".gitignore" />
+    <File Path="CHANGELOG.md" />
+    <File Path="CONTRIBUTING.md" />
     <File Path="Directory.Build.props" />
     <File Path="Directory.Packages.props" />
     <File Path="global.json" />
-    <File Path="CHANGELOG.md" />
     <File Path="README.md" />
+    <File Path="SECURITY.md" />
   </Folder>
   <Folder Name="/.github/">
     <File Path=".github/dependabot.yml" />
+    <File Path=".github/pull_request_template.md" />
   </Folder>
   <Folder Name="/.github/workflows/">
     <File Path=".github/workflows/ci.yml" />
+    <File Path=".github/workflows/release.yml" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/Bojalib/Bojalib.csproj" />
@@ -21,5 +25,9 @@
   <Folder Name="/tests/">
     <File Path="tests/Directory.Build.props" />
     <Project Path="tests/Bojalib.Tests/Bojalib.Tests.csproj" />
+  </Folder>
+  <Folder Name="/benchmarks/">
+    <File Path="benchmarks/Directory.Build.props" />
+    <Project Path="benchmarks/Bojalib.Benchmarks/Bojalib.Benchmarks.csproj" />
   </Folder>
 </Solution>

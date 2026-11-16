@@ -18,8 +18,13 @@ updates:
         patterns:
           - "AwesomeAssertions"
           - "coverlet.*"
-          - "Microsoft.NET.Test.Sdk"
           - "NUnit*"
+        update-types: [minor, patch]
+      # Build / benchmark tooling that never ships in the package
+      tooling:
+        patterns:
+          - "MinVer"
+          - "BenchmarkDotNet*"
         update-types: [minor, patch]
 
   # .NET SDK pinned in global.json

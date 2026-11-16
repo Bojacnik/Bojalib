@@ -52,3 +52,6 @@ dotnet_naming_rule.types_pascal.symbols = types
 dotnet_naming_rule.types_pascal.style = pascal
 dotnet_naming_symbols.types.applicable_kinds = class, struct, enum, delegate, record
 dotnet_naming_style.pascal.capitalization = pascal_case
+
+# LinkedStack / LinkedQueue really are a stack and a queue.
+dotnet_code_quality.CA1711.allowed_suffixes = Stack|Queue

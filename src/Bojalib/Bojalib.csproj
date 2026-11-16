@@ -2,12 +2,20 @@
 
   <PropertyGroup>
     <PackageId>Bojalib</PackageId>
-    <Description>Personal library of data structures, sorting algorithms and utilities.</Description>
+    <Description>Allocation-conscious data structures (Trie, TreeNode, LinkedStack, LinkedQueue), span-based sorting algorithms and safe recursive file-system search.</Description>
     <!-- Lets consumers' trimmed / Native AOT publishes drop the parts they don't use,
          and turns on the analyzers that warn if we write code that breaks that. -->
     <IsTrimmable>true</IsTrimmable>
     <IsAotCompatible>true</IsAotCompatible>
+    <!-- Validates the package on pack. After 2.0.0 is on nuget.org, uncomment the baseline so any 2.x
+         release that breaks code compiled against 2.0.0 fails to pack. -->
+    <EnablePackageValidation>true</EnablePackageValidation>
+    <!-- <PackageValidationBaselineVersion>2.0.0</PackageValidationBaselineVersion> -->
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MinVer" PrivateAssets="all" />
+  </ItemGroup>
 
   <ItemGroup>
     <InternalsVisibleTo Include="Bojalib.Tests" />

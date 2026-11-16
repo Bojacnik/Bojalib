@@ -2,17 +2,23 @@ name: CI
 
 on:
   push:
-    branches: [main, master]
+    branches: [main]
   pull_request:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      DOTNET_NOLOGO: true
-      DOTNET_CLI_TELEMETRY_OPTOUT: true
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # MinVer computes the version from git tags.
 
       - uses: actions/setup-dotnet@v6
         with:
@@ -21,11 +27,24 @@ jobs:
       - name: Restore
         run: dotnet restore Bojalib.slnx
 
+      - name: Check formatting
+        run: dotnet format Bojalib.slnx --verify-no-changes --no-restore
+
       - name: Build
         run: dotnet build Bojalib.slnx --configuration Release --no-restore
 
-      - name: Test
-        run: dotnet test Bojalib.slnx --configuration Release --no-build --collect:"XPlat Code Coverage"
+      - name: Test (fails below 95% line / 90% branch coverage)
+        run: >
+          dotnet test --project tests/Bojalib.Tests --configuration Release --no-build
+          --coverlet --coverlet-output-format cobertura
+          --coverlet-threshold 95 --coverlet-threshold-type line
+          --coverlet-threshold 90 --coverlet-threshold-type branch
+          --coverlet-threshold-stat Total
 
       - name: Pack
-        run: dotnet pack Bojalib.slnx --configuration Release --no-build --output artifacts
+        run: dotnet pack src/Bojalib --configuration Release --no-build --output artifacts
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: packages
+          path: artifacts/

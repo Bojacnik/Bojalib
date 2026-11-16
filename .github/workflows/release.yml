@@ -1,0 +1,54 @@
+name: Release
+
+# Push a tag like v2.0.0 to build, test, publish to nuget.org and create a GitHub release.
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write # Create the GitHub release.
+  id-token: write # NuGet trusted publishing (no stored API key).
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: nuget
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Build
+        run: dotnet build Bojalib.slnx --configuration Release
+
+      - name: Test
+        run: dotnet test --project tests/Bojalib.Tests --configuration Release --no-build
+
+      - name: Pack
+        run: dotnet pack src/Bojalib --configuration Release --no-build --output artifacts
+
+      - name: Log in to nuget.org
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ vars.NUGET_USER }}
+
+      - name: Publish to nuget.org
+        run: >
+          dotnet nuget push "artifacts/*.nupkg"
+          --api-key "${{ steps.login.outputs.NUGET_API_KEY }}"
+          --source https://api.nuget.org/v3/index.json
+          --skip-duplicate
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ github.ref_name }}" artifacts/* --title "${{ github.ref_name }}" --notes "See [CHANGELOG.md](CHANGELOG.md)." --verify-tag

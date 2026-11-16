@@ -1,36 +1,62 @@
 # Changelog
 
-## 2.0.0
+All notable changes to this project are documented here. The format follows
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
-Bojalib is now a single package. `Bojalib.Core.Collections`, `Bojalib.Core.Collections.Generic`,
-`Bojalib.Core.IO` and `Bojalib.Core.Sorting` are deprecated — install `Bojalib` instead.
-Trimmed / Native AOT publishes only keep the types you actually use.
+## [2.0.0]
 
-### Breaking changes
-- Targets `net10.0` (was `net9.0`).
-- Namespaces: `Bojalib.Core.Collections.Generic` → `Bojalib.Collections`,
-  `Bojalib.Core.Sorting.Sorting` → `Bojalib.Sorting`, `Bojalib.Core.IO` → `Bojalib.IO`.
-- `Stack<T>` renamed to `LinkedStack<T>` (no longer clashes with `System.Collections.Generic.Stack<T>`).
-- `Quicksort.Sort` / `Bubblesort.Sort` are generic: `Sort<T>(T[])`, plus an `IComparer<T>` overload.
-- `TrieTree<T>` is a `sealed class` (was a `record`); `TrieNode<T>` is no longer public.
-- `QueueEmptyException` / `StackEmptyException` now derive from `InvalidOperationException`.
-- `Node<T>` enumeration now walks all descendants (was: only direct children).
+A redesign. Bojalib is now a single package with a consistent, .NET-style API; nearly every public type changed.
 
-### Fixes
-- `LinkedStack.Push` now stores items (previously only pushed onto a non-empty stack, so nothing was ever stored).
-- `Locate.DirectoriesRecursively` now returns nested directories.
-- `Quicksort` works with `CompareTo` implementations that return values other than -1/0/1.
-- `Node(TData, params Node[])` constructor is now callable.
-- `Node.Equals(x, y)` compares children structurally (was: list reference, so never equal).
-- `TrieTree`: prefixes of stored words and missing words are no longer confused with a stored `default`
-  value (e.g. the first enum member) — use the new `TryFindWord` / `ContainsWord`. Empty-string keys work.
-- `Quicksort` / `Bubblesort` handle `null` elements (sorted first) instead of throwing.
-- `Quicksort` stack depth is O(log n) for any input.
-- `Locate.DirectoriesRecursively` no longer follows symbolic links (a looping link made it run forever),
-  skips unreadable directories instead of throwing, and includes hidden directories.
-- `CustomQueue` no longer keeps the last dequeued item alive.
+### Migrating from 1.x / the `Bojalib.Core.*` packages
+
+`Bojalib.Core.Collections`, `Bojalib.Core.Collections.Generic`, `Bojalib.Core.IO` and `Bojalib.Core.Sorting`
+are deprecated — install `Bojalib` instead. Trimmed / Native AOT publishes only keep the types you use.
+
+| 1.x | 2.0 |
+|---|---|
+| `Bojalib.Core.Collections.Generic` namespace | `Bojalib.Collections` |
+| `Bojalib.Core.Sorting.Sorting` namespace | `Bojalib.Sorting` |
+| `Bojalib.Core.IO` namespace | `Bojalib.IO` |
+| `TrieTree<T>` (`InsertWord`, `FindWord`) | `Trie<TValue>` (indexer, `Add`, `TryGetValue`, …) |
+| `Node<T>` (`Data`, `Children` list) | `TreeNode<T>` (`Value`, `AddChild`, `DepthFirst`, …) |
+| `Stack<T>` | `LinkedStack<T>` |
+| `CustomQueue<T>` (`IsEmpty()`) | `LinkedQueue<T>` (`IsEmpty`, `Count`, …) |
+| `StackEmptyException`, `QueueEmptyException` | `InvalidOperationException`, or use `TryPop` / `TryDequeue` |
+| `Quicksort.Sort(int[])` | `QuickSort.Sort<T>(Span<T>)` — arrays still work as-is |
+| `Bubblesort.Sort(int[])` | `BubbleSort.Sort<T>(Span<T>)` |
+| `Locate.DirectoriesRecursively(path)` → `List<string>` incl. root | `Locate.Directories(path)` → lazy, excludes root |
+| `Locate.Files(dir)` → `List<string>` | `Locate.Files(dir, recursive)` → lazy |
+
+Requires .NET 10.
 
 ### Added
-- Marked trimmable and Native AOT compatible.
-- `TrieTree.TryFindWord`, `TrieTree.ContainsWord`.
-- `Sort<T>(T[], IComparer<T>)` overloads; `Bubblesort` exits early once sorted.
+- `Trie<TValue>`: implements `IReadOnlyDictionary<string, TValue>`; `TryAdd`, `Remove`, `Clear`, `ContainsPrefix`,
+  `EnumeratePrefix`; lookups take `ReadOnlySpan<char>` so string slices need no allocation; keys enumerate in
+  ordinal order.
+- `TreeNode<T>`: `Parent`, `IsRoot`, `IsLeaf`, `AddChild`, `RemoveChild`, `DepthFirst`, `BreadthFirst`,
+  `Ancestors`, `CreateStructuralComparer`. Adding a node that already has a parent or would form a cycle throws.
+- `LinkedStack<T>` / `LinkedQueue<T>`: `Count`, `IsEmpty`, `Peek`, `TryPeek`, `TryPop` / `TryDequeue`, `Clear`,
+  allocation-free `struct` enumerators that detect modification.
+- `HeapSort` and `InsertionSort`.
+- All sorts accept `Span<T>` with `IComparable<T>`, `IComparer<T>` or `Comparison<T>`; `QuickSort` also takes a
+  generic `TComparer` so `struct` comparers are inlined.
+- `Locate.Files(path, recursive: true)`.
+- Trimming and Native AOT compatible.
+
+### Changed
+- `QuickSort` is an introsort: median-of-three pivot, insertion sort for small ranges and a heapsort fallback, so it
+  is O(n log n) in the worst case with O(log n) stack depth.
+- `BubbleSort` stops as soon as a pass makes no swaps.
+- `Locate` searches are lazy and throw `DirectoryNotFoundException` immediately for a missing directory.
+
+### Fixed
+- `Stack.Push` never stored anything.
+- `Locate.DirectoriesRecursively` dropped nested directories, followed symbolic links (a link loop made it run
+  forever), and threw on unreadable directories. Links are now listed but not followed, unreadable directories are
+  skipped and hidden directories are included.
+- `Quicksort` mis-sorted types whose `CompareTo` returns values other than -1/0/1.
+- Sorting threw `NullReferenceException` on `null` elements; they now sort first.
+- `TrieTree.FindWord` returned `default` for missing words and prefixes, indistinguishable from a stored default
+  value such as the first enum member; empty-string keys were silently dropped; `with` copies shared state.
+- `Node` could not be constructed, compared children by reference, and only enumerated direct children.
+- `CustomQueue` kept the last dequeued item alive.
