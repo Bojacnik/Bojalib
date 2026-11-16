@@ -20,8 +20,9 @@ namespace Bojalib.Sorting.Internal;
 /// </para>
 /// <para>
 /// AVX-512: lanes are packed with the <c>vpcompress</c>/<c>vpexpand</c> instructions. AVX2: with
-/// <c>vpermd</c> and a precomputed shuffle per comparison mask. Supports 32- and 64-bit integers and floats
-/// (floats must not contain NaN).
+/// <c>vpermd</c> and a precomputed shuffle per comparison mask. Everything else with 128-bit SIMD (ARM64 NEON,
+/// SSSE3): with the portable byte shuffle (<c>tbl</c> / <c>pshufb</c>) and a byte-level shuffle table.
+/// Supports 32- and 64-bit integers and floats (floats must not contain NaN).
 /// </para>
 /// </remarks>
 internal static class VectorizedPartition
@@ -35,12 +36,16 @@ internal static class VectorizedPartition
     // Same for 4 x 64-bit lanes, expressed as pairs of 32-bit lane indices for vpermd.
     private static readonly int[] s_permute64 = BuildPermuteTable(lanes: 4, intsPerLane: 2);
 
+    // 128-bit tables are byte shuffles: 16 bytes per mask (4 x 32-bit lanes, or 2 x 64-bit lanes).
+    private static readonly byte[] s_shuffle32x4 = BuildByteShuffleTable(lanes: 4, bytesPerLane: 4);
+    private static readonly byte[] s_shuffle64x2 = BuildByteShuffleTable(lanes: 2, bytesPerLane: 8);
+
     /// <summary>Whether <typeparamref name="T"/> can be partitioned with SIMD on this machine.</summary>
     public static bool IsSupported<T>()
     {
         bool supportedType = typeof(T) == typeof(int) || typeof(T) == typeof(uint) || typeof(T) == typeof(float) ||
                              typeof(T) == typeof(long) || typeof(T) == typeof(ulong) || typeof(T) == typeof(double);
-        return supportedType && (Avx512F.IsSupported || Avx2.IsSupported);
+        return supportedType && (Avx512F.IsSupported || Avx2.IsSupported || Vector128.IsHardwareAccelerated);
     }
 
     /// <summary>
@@ -56,7 +61,12 @@ internal static class VectorizedPartition
             return Partition512(ref start, length, pivot, equalGoesRight);
         }
 
-        return Partition256(ref start, length, pivot, equalGoesRight);
+        if (Avx2.IsSupported)
+        {
+            return Partition256(ref start, length, pivot, equalGoesRight);
+        }
+
+        return Partition128(ref start, length, pivot, equalGoesRight);
     }
 
     internal static int Partition512<T>(ref T start, int length, T pivot, bool equalGoesRight)
@@ -196,6 +206,63 @@ internal static class VectorizedPartition
         writeRight -= rightCount;
     }
 
+    internal static int Partition128<T>(ref T start, int length, T pivot, bool equalGoesRight)
+    {
+        int lanes = Vector128<T>.Count;
+        Vector128<T> pivots = Vector128.Create(pivot);
+
+        Vector128<T> first = Vector128.LoadUnsafe(ref start);
+        Vector128<T> last = Vector128.LoadUnsafe(ref start, (nuint)(length - lanes));
+        int readLeft = lanes;
+        int readRight = length - lanes;
+        int writeLeft = 0;
+        int writeRight = length;
+
+        while (readRight - readLeft >= lanes)
+        {
+            Vector128<T> vector;
+            if (readLeft - writeLeft <= writeRight - readRight)
+            {
+                vector = Vector128.LoadUnsafe(ref start, (nuint)readLeft);
+                readLeft += lanes;
+            }
+            else
+            {
+                readRight -= lanes;
+                vector = Vector128.LoadUnsafe(ref start, (nuint)readRight);
+            }
+
+            Store128(ref start, vector, pivots, equalGoesRight, ref writeLeft, ref writeRight);
+        }
+
+        PartitionTail(ref start, readLeft, readRight, pivot, equalGoesRight, ref writeLeft, ref writeRight);
+        Store128(ref start, first, pivots, equalGoesRight, ref writeLeft, ref writeRight);
+        Store128(ref start, last, pivots, equalGoesRight, ref writeLeft, ref writeRight);
+        return writeLeft;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void Store128<T>(ref T start, Vector128<T> vector, Vector128<T> pivots, bool equalGoesRight,
+        ref int writeLeft, ref int writeRight)
+    {
+        int lanes = Vector128<T>.Count;
+        Vector128<T> goesRight = equalGoesRight
+            ? Vector128.GreaterThanOrEqual(vector, pivots)
+            : Vector128.GreaterThan(vector, pivots);
+        uint mask = goesRight.ExtractMostSignificantBits();
+        int rightCount = BitOperations.PopCount(mask);
+
+        byte[] table = lanes == 4 ? s_shuffle32x4 : s_shuffle64x2;
+        Vector128<byte> shuffle = Vector128.LoadUnsafe(ref MemoryMarshal.GetArrayDataReference(table), mask * 16);
+        Vector128<T> packed = Vector128.Shuffle(vector.AsByte(), shuffle).As<byte, T>();
+
+        packed.StoreUnsafe(ref start, (nuint)writeLeft);
+        packed.StoreUnsafe(ref start, (nuint)(writeRight - lanes));
+
+        writeLeft += lanes - rightCount;
+        writeRight -= rightCount;
+    }
+
     /// <summary>
     /// Places the fewer-than-one-vector elements left between the read cursors. They're copied out first so
     /// their slots become free space too, then written one by one.
@@ -225,6 +292,30 @@ internal static class VectorizedPartition
                 Unsafe.Add(ref start, writeLeft++) = value;
             }
         }
+    }
+
+    private static byte[] BuildByteShuffleTable(int lanes, int bytesPerLane)
+    {
+        byte[] table = new byte[(1 << lanes) * 16];
+        for (int mask = 0; mask < 1 << lanes; mask++)
+        {
+            int position = 0;
+            foreach (bool wantRight in (ReadOnlySpan<bool>)[false, true])
+            {
+                for (int lane = 0; lane < lanes; lane++)
+                {
+                    if ((((mask >> lane) & 1) == 1) == wantRight)
+                    {
+                        for (int b = 0; b < bytesPerLane; b++)
+                        {
+                            table[(mask * 16) + position++] = (byte)((lane * bytesPerLane) + b);
+                        }
+                    }
+                }
+            }
+        }
+
+        return table;
     }
 
     private static int[] BuildPermuteTable(int lanes, int intsPerLane)

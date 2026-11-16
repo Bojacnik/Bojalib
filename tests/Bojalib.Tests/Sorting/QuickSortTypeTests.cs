@@ -124,6 +124,43 @@ public class QuickSortTypeTests
         items.Should().Equal("c", "b", "a", "nan");
     }
 
+    private static void CheckPackedKeySort<TKey>(Gen<TKey> keyGen)
+        where TKey : notnull
+    {
+        keyGen.Array[0, 3000].Sample(input =>
+        {
+            TKey[] keys = [.. input];
+            int[] items = [.. Enumerable.Range(0, keys.Length)];
+
+            QuickSort.Sort(keys.AsSpan(), items.AsSpan());
+
+            // Pairs stay together, keys come out in Comparer<TKey>.Default order, and equal keys keep their
+            // original order (the packed path is stable).
+            for (int i = 0; i < keys.Length; i++)
+            {
+                keys[i].Should().Be(input[items[i]]);
+            }
+
+            keys.Should().BeInAscendingOrder(Comparer<TKey>.Default);
+            for (int i = 1; i < keys.Length; i++)
+            {
+                if (Comparer<TKey>.Default.Compare(keys[i - 1], keys[i]) == 0 && keys[i - 1].Equals(keys[i]))
+                {
+                    items[i - 1].Should().BeLessThan(items[i]);
+                }
+            }
+        }, iter: 150);
+    }
+
+    [Test]
+    public void KeysAndItems_PackedSimdPath_Int32UInt32Single()
+    {
+        CheckPackedKeySort(Gen.Int);
+        CheckPackedKeySort(Gen.Int[-5, 5]);
+        CheckPackedKeySort(Gen.UInt);
+        CheckPackedKeySort(Gen.OneOf(Gen.Float, Gen.Const(float.NaN), Gen.Const(-0f), Gen.Const(0f), Gen.Const(float.NegativeInfinity)));
+    }
+
     [Test]
     public void KeysAndItems_DifferentLengths_Throws()
     {
