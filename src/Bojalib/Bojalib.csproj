@@ -3,6 +3,10 @@
   <PropertyGroup>
     <PackageId>Bojalib</PackageId>
     <Description>Personal library of data structures, sorting algorithms and utilities.</Description>
+    <!-- Lets consumers' trimmed / Native AOT publishes drop the parts they don't use,
+         and turns on the analyzers that warn if we write code that breaks that. -->
+    <IsTrimmable>true</IsTrimmable>
+    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 
   <ItemGroup>
