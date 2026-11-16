@@ -31,7 +31,7 @@ updates:
     commit-message:
       prefix: "chore(deps)"
     ignore:
-      # Projects target net9.0; move to a new major SDK deliberately
+      # Projects target net10.0; move to a new major SDK deliberately
       - dependency-name: "*"
         update-types: [version-update:semver-major]
 

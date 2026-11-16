@@ -5,10 +5,10 @@ Personal .NET library of data structures, sorting algorithms and small utilities
 ## Layout
 
 ```
-Bojalib.slnx                 # solution (XML .slnx format, .NET SDK 9.0.200+)
+Bojalib.slnx                 # solution (XML .slnx format)
 Directory.Build.props        # shared build settings + NuGet metadata
 Directory.Packages.props     # central package versions
-global.json                  # pinned SDK (rolls forward to newer majors)
+global.json                  # pinned .NET 10 SDK (rolls forward to newer feature bands)
 src/
   Bojalib/                   # the library (PackageId: Bojalib)
     Collections/             # LinkedStack, CustomQueue, TrieTree, Node
