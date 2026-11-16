@@ -7,6 +7,8 @@
          and turns on the analyzers that warn if we write code that breaks that. -->
     <IsTrimmable>true</IsTrimmable>
     <IsAotCompatible>true</IsAotCompatible>
+    <!-- Needed only for [module: SkipLocalsInit] (no pointer code): stackalloc'd buffers aren't zeroed first. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <!-- Validates the package on pack. After 2.0.0 is on nuget.org, uncomment the baseline so any 2.x
          release that breaks code compiled against 2.0.0 fails to pack. -->
     <EnablePackageValidation>true</EnablePackageValidation>

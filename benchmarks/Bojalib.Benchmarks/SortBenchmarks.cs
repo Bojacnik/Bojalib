@@ -3,7 +3,7 @@ using Bojalib.Sorting;
 
 namespace Bojalib.Benchmarks;
 
-/// <summary>Bojalib's sorts against the runtime's own <see cref="MemoryExtensions.Sort{T}(Span{T})"/>.</summary>
+/// <summary>Bojalib's sorts against the runtime's own <see cref="MemoryExtensions.Sort{T}(Span{T})"/> on random ints.</summary>
 [MemoryDiagnoser]
 public class SortBenchmarks
 {
@@ -36,6 +36,20 @@ public class SortBenchmarks
     {
         _source.CopyTo(_work, 0);
         Sorting.QuickSort.Sort(_work);
+    }
+
+    [Benchmark]
+    public void MergeSort()
+    {
+        _source.CopyTo(_work, 0);
+        Sorting.MergeSort.Sort(_work);
+    }
+
+    [Benchmark]
+    public void RadixSort()
+    {
+        _source.CopyTo(_work, 0);
+        Sorting.RadixSort.Sort(_work);
     }
 
     [Benchmark]

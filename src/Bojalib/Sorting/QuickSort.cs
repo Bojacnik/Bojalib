@@ -1,57 +1,60 @@
-using System.Numerics;
+using System.Buffers;
+using System.Runtime.CompilerServices;
+using Bojalib.Sorting.Internal;
 
 namespace Bojalib.Sorting;
 
 /// <summary>
-/// In-place introspective quicksort: median-of-three quicksort that switches to insertion sort for small ranges
-/// and to heapsort if recursion gets too deep, so it is O(n log n) in the worst case.
+/// Fast in-place unstable sort: pattern-defeating quicksort with SIMD partitioning for built-in numeric types.
+/// O(n log n) worst case, O(n) for already sorted or reversed input, no allocations.
 /// </summary>
-/// <remarks>The sort is not stable. <see langword="null"/> elements sort before all other elements.</remarks>
+/// <remarks>
+/// With the default ordering, 8-bit integers (and large 16-bit inputs) are counting-sorted instead, and
+/// <see langword="null"/>s and NaNs sort first, matching <see cref="Comparer{T}.Default"/>.
+/// The relative order of equal elements is not preserved; use <see cref="MergeSort"/> when it must be.
+/// </remarks>
 public static class QuickSort
 {
-    private const int InsertionSortThreshold = 16;
-
     /// <summary>Sorts <paramref name="span"/> in ascending order using <see cref="IComparable{T}"/>.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="span">The elements to sort.</param>
-    public static void Sort<T>(Span<T> span) where T : IComparable<T>? =>
-        SortCore(span, default(DefaultComparer<T>));
+    public static void Sort<T>(Span<T> span) where T : IComparable<T>? => SortDefault(span);
 
     /// <summary>Sorts <paramref name="span"/> using <paramref name="comparer"/>.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="span">The elements to sort.</param>
-    /// <param name="comparer">The comparer to use, or <see langword="null"/> for <see cref="Comparer{T}.Default"/>.</param>
+    /// <param name="comparer">The comparer, or <see langword="null"/> for <see cref="Comparer{T}.Default"/>.</param>
     public static void Sort<T>(Span<T> span, IComparer<T>? comparer)
     {
-        if (comparer is null)
+        if (comparer is null || ReferenceEquals(comparer, Comparer<T>.Default))
         {
-            SortCore(span, default(DefaultComparer<T>));
+            SortDefault(span);
         }
         else
         {
-            SortCore(span, new WrappedComparer<T>(comparer));
+            PdqSort.Sort(span, new ComparerLess<T, IComparer<T>>(comparer));
         }
     }
 
     /// <summary>Sorts <paramref name="span"/> using <paramref name="comparison"/>.</summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="span">The elements to sort.</param>
-    /// <param name="comparison">The comparison to use.</param>
+    /// <param name="comparison">The comparison.</param>
     /// <exception cref="ArgumentNullException"><paramref name="comparison"/> is <see langword="null"/>.</exception>
     public static void Sort<T>(Span<T> span, Comparison<T> comparison)
     {
         ArgumentNullException.ThrowIfNull(comparison);
-        SortCore(span, new ComparisonComparer<T>(comparison));
+        PdqSort.Sort(span, new ComparisonLess<T>(comparison));
     }
 
     /// <summary>
-    /// Sorts <paramref name="span"/> using a comparer whose type is known at compile time. Passing a
-    /// <see langword="struct"/> comparer lets the JIT inline every comparison.
+    /// Sorts <paramref name="span"/> using a comparer whose type is known at compile time. A <see langword="struct"/>
+    /// comparer is fully inlined into the sort loop.
     /// </summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <typeparam name="TComparer">The comparer type; ideally a <see langword="struct"/>.</typeparam>
     /// <param name="span">The elements to sort.</param>
-    /// <param name="comparer">The comparer to use.</param>
+    /// <param name="comparer">The comparer.</param>
     /// <exception cref="ArgumentNullException"><paramref name="comparer"/> is <see langword="null"/>.</exception>
     public static void Sort<T, TComparer>(Span<T> span, TComparer comparer) where TComparer : IComparer<T>
     {
@@ -60,99 +63,80 @@ public static class QuickSort
             throw new ArgumentNullException(nameof(comparer));
         }
 
-        SortCore(span, comparer);
+        PdqSort.Sort(span, new ComparerLess<T, TComparer>(comparer));
     }
 
-    private static void SortCore<T, TComparer>(Span<T> span, TComparer comparer) where TComparer : IComparer<T>
+    /// <summary>
+    /// Sorts <paramref name="keys"/> and rearranges <paramref name="items"/> the same way, so
+    /// <c>items[i]</c> stays paired with <c>keys[i]</c>. Faster than sorting items with a key-selecting comparison.
+    /// </summary>
+    /// <typeparam name="TKey">The key type.</typeparam>
+    /// <typeparam name="TValue">The item type.</typeparam>
+    /// <param name="keys">The keys to sort by.</param>
+    /// <param name="items">The items, one per key.</param>
+    /// <param name="comparer">Compares keys; <see langword="null"/> for <see cref="Comparer{T}.Default"/>.</param>
+    /// <exception cref="ArgumentException">The spans have different lengths.</exception>
+    public static void Sort<TKey, TValue>(Span<TKey> keys, Span<TValue> items, IComparer<TKey>? comparer = null)
     {
-        if (span.Length < 2)
+        if (keys.Length != items.Length)
+        {
+            throw new ArgumentException("Keys and items must have the same length.", nameof(items));
+        }
+
+        if (keys.Length < 2)
         {
             return;
         }
 
-        IntroSort(span, 2 * BitOperations.Log2((uint)span.Length), comparer);
-    }
-
-    internal static void IntroSort<T, TComparer>(Span<T> span, int depthLimit, TComparer comparer)
-        where TComparer : IComparer<T>
-    {
-        while (span.Length > InsertionSortThreshold)
+        KeyValuePair<TKey, TValue>[] pairs = ArrayPool<KeyValuePair<TKey, TValue>>.Shared.Rent(keys.Length);
+        try
         {
-            if (depthLimit-- == 0)
+            Span<KeyValuePair<TKey, TValue>> span = pairs.AsSpan(0, keys.Length);
+            for (int i = 0; i < span.Length; i++)
             {
-                HeapSort.SortCore(span, comparer);
-                return;
+                span[i] = new(keys[i], items[i]);
             }
 
-            Partition(span, comparer, out int leftEnd, out int rightStart);
-            Span<T> left = span[..leftEnd];
-            Span<T> right = span[rightStart..];
-
-            // Recurse into the smaller half and loop on the larger one: stack depth stays O(log n).
-            if (left.Length < right.Length)
+            if (comparer is null && !Primitives.IsFloatingPoint<TKey>())
             {
-                IntroSort(left, depthLimit, comparer);
-                span = right;
+                PdqSort.Sort(span, new KeyLess<TKey, TValue, DefaultLess<TKey>>(default));
             }
             else
             {
-                IntroSort(right, depthLimit, comparer);
-                span = left;
+                var less = new ComparerLess<TKey, IComparer<TKey>>(comparer ?? Comparer<TKey>.Default);
+                PdqSort.Sort(span, new KeyLess<TKey, TValue, ComparerLess<TKey, IComparer<TKey>>>(less));
+            }
+
+            for (int i = 0; i < span.Length; i++)
+            {
+                keys[i] = span[i].Key;
+                items[i] = span[i].Value;
             }
         }
-
-        InsertionSort.SortCore(span, comparer);
+        finally
+        {
+            ArrayPool<KeyValuePair<TKey, TValue>>.Shared.Return(
+                pairs, RuntimeHelpers.IsReferenceOrContainsReferences<KeyValuePair<TKey, TValue>>());
+        }
     }
 
-    /// <summary>Hoare partition around a median-of-three pivot.</summary>
-    /// <param name="span">The range to partition.</param>
-    /// <param name="comparer">The comparer.</param>
-    /// <param name="leftEnd">Exclusive end of the part that is &lt;= pivot.</param>
-    /// <param name="rightStart">Start of the part that is &gt;= pivot.</param>
-    private static void Partition<T, TComparer>(Span<T> span, TComparer comparer, out int leftEnd, out int rightStart)
-        where TComparer : IComparer<T>
+    internal static void SortDefault<T>(Span<T> span)
     {
-        int last = span.Length - 1;
-        int middle = last / 2;
-
-        SwapIfGreater(span, 0, middle, comparer);
-        SwapIfGreater(span, 0, last, comparer);
-        SwapIfGreater(span, middle, last, comparer);
-
-        T pivot = span[middle];
-        int i = 0;
-        int j = last;
-
-        while (i <= j)
+        if (span.Length < 2 || Primitives.TryCountingSort(span))
         {
-            while (comparer.Compare(span[i], pivot) < 0)
-            {
-                i++;
-            }
-
-            while (comparer.Compare(span[j], pivot) > 0)
-            {
-                j--;
-            }
-
-            if (i <= j)
-            {
-                (span[i], span[j]) = (span[j], span[i]);
-                i++;
-                j--;
-            }
+            return;
         }
 
-        leftEnd = j + 1;
-        rightStart = i;
-    }
-
-    private static void SwapIfGreater<T, TComparer>(Span<T> span, int a, int b, TComparer comparer)
-        where TComparer : IComparer<T>
-    {
-        if (comparer.Compare(span[a], span[b]) > 0)
+        if (Primitives.IsFloatingPoint<T>())
         {
-            (span[a], span[b]) = (span[b], span[a]);
+            span = span[Primitives.MoveNaNsToFront(span)..];
         }
+
+        if (Primitives.TryHandlePresorted(span))
+        {
+            return;
+        }
+
+        PdqSort.Sort(span, default(DefaultLess<T>));
     }
 }

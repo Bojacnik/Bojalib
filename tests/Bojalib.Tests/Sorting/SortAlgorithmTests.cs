@@ -1,4 +1,5 @@
 using Bojalib.Sorting;
+using CsCheck;
 
 namespace Bojalib.Tests.Sorting;
 
@@ -192,17 +193,6 @@ public sealed class QuickSortTests : SortAlgorithmTests
 
         act.Should().Throw<ArgumentNullException>();
     }
-
-    [Test]
-    public void IntroSort_DepthLimitReached_FallsBackToHeapSort()
-    {
-        int[] array = [.. Enumerable.Range(0, 1000).Reverse()];
-
-        // Depth limit 0 forces the heapsort fallback on the first partition.
-        QuickSort.IntroSort(array.AsSpan(), 0, default(DefaultComparer<int>));
-
-        array.Should().BeInAscendingOrder();
-    }
 }
 
 public sealed class HeapSortTests : SortAlgorithmTests
@@ -249,3 +239,27 @@ public sealed class BubbleSortTests : StableSortAlgorithmTests
 
     protected override void Sort<T>(Span<T> span, Comparison<T> comparison) => BubbleSort.Sort(span, comparison);
 }
+
+public sealed class MergeSortTests : StableSortAlgorithmTests
+{
+    protected override void Sort<T>(Span<T> span) => MergeSort.Sort(span);
+
+    protected override void Sort<T>(Span<T> span, IComparer<T>? comparer) => MergeSort.Sort(span, comparer);
+
+    protected override void Sort<T>(Span<T> span, Comparison<T> comparison) => MergeSort.Sort(span, comparison);
+
+    [Test]
+    public void Sort_ManyRunsWithDuplicates_IsStable()
+    {
+        Gen.Int[0, 20].Array[0, 5000].Sample(keys =>
+        {
+            (int Key, int Order)[] items = [.. keys.Select((k, i) => (k, i))];
+            (int Key, int Order)[] expected = [.. items.OrderBy(static x => x.Key)]; // LINQ OrderBy is stable
+
+            MergeSort.Sort(items, static (a, b) => a.Key.CompareTo(b.Key));
+
+            items.Should().Equal(expected);
+        }, iter: 200);
+    }
+}
+
