@@ -1,5 +1,5 @@
 using Bojalib.Sorting;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace Bojalib.Tests.Sorting;
 

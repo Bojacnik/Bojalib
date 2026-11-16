@@ -11,7 +11,7 @@ Directory.Packages.props     # central package versions
 global.json                  # pinned SDK (rolls forward to newer majors)
 src/
   Bojalib/                   # the library (PackageId: Bojalib)
-    Collections/             # Stack, CustomQueue, TrieTree, Node
+    Collections/             # LinkedStack, CustomQueue, TrieTree, Node
     IO/                      # Locate helpers
     Sorting/                 # Quicksort, Bubblesort (generic over IComparable<T>)
 tests/

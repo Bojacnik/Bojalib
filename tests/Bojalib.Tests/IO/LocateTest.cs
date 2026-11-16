@@ -1,5 +1,5 @@
 using Bojalib.IO;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace Bojalib.Tests.IO;
 

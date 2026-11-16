@@ -2,7 +2,7 @@ using Bojalib.Collections.Exceptions;
 
 namespace Bojalib.Collections;
 
-public class Stack<TData>
+public class LinkedStack<TData>
 {
     private class StackItem
     {

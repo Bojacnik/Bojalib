@@ -1,14 +1,15 @@
+using Bojalib.Collections;
 using Bojalib.Collections.Exceptions;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace Bojalib.Tests.Collections;
 
-public class StackTest
+public class LinkedStackTest
 {
     [Test]
     public void Pop_AfterPushes_ReturnsItemsInLifoOrder()
     {
-        var stack = new Bojalib.Collections.Stack<int>();
+        var stack = new LinkedStack<int>();
 
         stack.Push(1);
         stack.Push(2);
@@ -22,7 +23,7 @@ public class StackTest
     [Test]
     public void Pop_Empty_ThrowsStackEmptyException()
     {
-        var stack = new Bojalib.Collections.Stack<int>();
+        var stack = new LinkedStack<int>();
 
         Action act = () => stack.Pop();
 
@@ -32,7 +33,7 @@ public class StackTest
     [Test]
     public void Pop_AfterDrained_ThrowsStackEmptyException()
     {
-        var stack = new Bojalib.Collections.Stack<string>();
+        var stack = new LinkedStack<string>();
         stack.Push("a");
         stack.Pop();
 

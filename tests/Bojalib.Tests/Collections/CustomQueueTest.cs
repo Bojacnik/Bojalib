@@ -1,6 +1,6 @@
 using Bojalib.Collections;
 using Bojalib.Collections.Exceptions;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace Bojalib.Tests.Collections;
 

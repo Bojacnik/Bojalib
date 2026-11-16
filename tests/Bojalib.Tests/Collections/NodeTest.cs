@@ -1,5 +1,5 @@
 using Bojalib.Collections;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace Bojalib.Tests.Collections;
 
