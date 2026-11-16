@@ -40,6 +40,17 @@ jobs:
           --coverlet-threshold 90 --coverlet-threshold-type line,branch
           --coverlet-threshold-stat Total
 
+      # The runner's CPU decides which SIMD paths run by default; force the others too.
+      - name: Test without AVX-512 (AVX2 paths)
+        run: dotnet test --project tests/Bojalib.Tests --configuration Release --no-build
+        env:
+          DOTNET_EnableAVX512F: 0
+
+      - name: Test without SIMD (scalar fallbacks)
+        run: dotnet test --project tests/Bojalib.Tests --configuration Release --no-build
+        env:
+          DOTNET_EnableHWIntrinsic: 0
+
       - name: Pack
         run: dotnet pack src/Bojalib --configuration Release --no-build --output artifacts
 
