@@ -1,0 +1,25 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path=".gitattributes" />
+    <File Path=".gitignore" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="global.json" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/.github/workflows/">
+    <File Path=".github/workflows/ci.yml" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Bojalib.Core/Bojalib.Core.csproj" />
+    <Project Path="src/Bojalib.Core.Collections/Bojalib.Core.Collections.csproj" />
+    <Project Path="src/Bojalib.Core.Collections.Generic/Bojalib.Core.Collections.Generic.csproj" />
+    <Project Path="src/Bojalib.Core.IO/Bojalib.Core.IO.csproj" />
+    <Project Path="src/Bojalib.Core.Sorting/Bojalib.Core.Sorting.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <File Path="tests/Directory.Build.props" />
+    <Project Path="tests/Bojalib.Tests.Core/Bojalib.Tests.Core.csproj" />
+  </Folder>
+</Solution>

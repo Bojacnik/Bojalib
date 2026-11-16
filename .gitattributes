@@ -1,2 +1,16 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+# Normalize line endings to LF in the repo
+* text=auto eol=lf
+
+*.cs      text diff=csharp
+*.csproj  text
+*.props   text
+*.targets text
+*.slnx    text
+*.sln     text eol=crlf
+*.md      text diff=markdown
+
+*.png  binary
+*.jpg  binary
+*.dll  binary
+*.nupkg binary
+*.snupkg binary
