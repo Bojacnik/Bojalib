@@ -190,4 +190,13 @@ public class LinkedQueueTests
         queue.Dequeue();
         return new WeakReference(item);
     }
+
+    [Test]
+    public void CollectionExpression_FirstItemAtFront()
+    {
+        LinkedQueue<int> queue = [1, 2, 3];
+
+        queue.Dequeue().Should().Be(1);
+        queue.Count.Should().Be(2);
+    }
 }

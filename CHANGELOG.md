@@ -30,23 +30,31 @@ are deprecated — install `Bojalib` instead. Trimmed / Native AOT publishes onl
 Requires .NET 10.
 
 ### Added
-- `Trie<TValue>`: implements `IReadOnlyDictionary<string, TValue>`; `TryAdd`, `Remove`, `Clear`, `ContainsPrefix`,
-  `EnumeratePrefix`; lookups take `ReadOnlySpan<char>` so string slices need no allocation; keys enumerate in
-  ordinal order.
-- `TreeNode<T>`: `Parent`, `IsRoot`, `IsLeaf`, `AddChild`, `RemoveChild`, `DepthFirst`, `BreadthFirst`,
-  `Ancestors`, `CreateStructuralComparer`. Adding a node that already has a parent or would form a cycle throws.
-- `LinkedStack<T>` / `LinkedQueue<T>`: `Count`, `IsEmpty`, `Peek`, `TryPeek`, `TryPop` / `TryDequeue`, `Clear`,
-  allocation-free `struct` enumerators that detect modification.
-- `HeapSort` and `InsertionSort`.
-- All sorts accept `Span<T>` with `IComparable<T>`, `IComparer<T>` or `Comparison<T>`; `QuickSort` also takes a
-  generic `TComparer` so `struct` comparers are inlined.
-- `Locate.Files(path, recursive: true)`.
+- **Sorting**
+  - `QuickSort` is now pattern-defeating quicksort with AVX-512 / AVX2 vectorized partitioning, inlined comparisons,
+    SIMD detection of sorted/reversed input and counting sort for 8/16-bit integers — about 2× faster than
+    `Span<T>.Sort()` on large random inputs. Also: keys + items overload, generic `TComparer` overload.
+  - `MergeSort` (stable, adaptive), `RadixSort` (any integer type), `HeapSort`, `InsertionSort`.
+  - `Selection.Select` / `Selection.PartialSort` (n-th element, top-k).
+  - `SortedSpan.LowerBound` / `UpperBound` / `EqualRange` (branchless) and `IsSorted` (SIMD).
+  - All sorts take `Span<T>` with `IComparable<T>`, `IComparer<T>` or `Comparison<T>`.
+- **Collections**
+  - `Trie<TValue>`: a radix tree implementing `IReadOnlyDictionary<string, TValue>`; span lookups; `ignoreCase`;
+    `ContainsPrefix`, `EnumeratePrefix`, `TryMatchLongestPrefix`, `EnumerateMatches` (wildcards),
+    `EnumerateFuzzy` (edit distance); allocation-free enumeration.
+  - `BinaryHeap<T>`, `IndexedPriorityQueue<TKey, TPriority>`, `LruCache<TKey, TValue>`, `RingBuffer<T>`,
+    `BloomFilter<T>`, `IntervalTree<TPoint, TValue>`, `DisjointSet` / `DisjointSet<T>`.
+  - `TreeNode<T>`: `Parent`, `Root`, `Depth`, `Height`, `IsRoot`, `IsLeaf`, `AddChild`, `RemoveChild`, `Find`,
+    `GetPath`, and allocation-free `DepthFirst`, `PostOrder`, `Leaves`, `Ancestors` plus pooled `BreadthFirst`.
+    Adding a node that already has a parent or would form a cycle throws.
+  - `LinkedStack<T>` / `LinkedQueue<T>`: `Count`, `IsEmpty`, `Peek`, `TryPeek`, `TryPop` / `TryDequeue`, `Clear`,
+    allocation-free enumerators that detect modification.
+  - Collection expressions for `LinkedStack`, `LinkedQueue`, `BinaryHeap` and `RingBuffer`.
+- **Hashing:** `XxHash64` (identical output to `System.IO.Hashing.XxHash64`).
+- **IO:** `Locate.Files(path, recursive: true)`.
 - Trimming and Native AOT compatible.
 
 ### Changed
-- `QuickSort` is an introsort: median-of-three pivot, insertion sort for small ranges and a heapsort fallback, so it
-  is O(n log n) in the worst case with O(log n) stack depth.
-- `BubbleSort` stops as soon as a pass makes no swaps.
 - `Locate` searches are lazy and throw `DirectoryNotFoundException` immediately for a missing directory.
 
 ### Fixed

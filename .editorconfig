@@ -55,3 +55,7 @@ dotnet_naming_style.pascal.capitalization = pascal_case
 
 # LinkedStack / LinkedQueue really are a stack and a queue.
 dotnet_code_quality.CA1711.allowed_suffixes = Stack|Queue
+
+# CA1710 wants collection types to end in Collection/Dictionary/Set/…, which fits poorly with data structures
+# that have established names (Trie, BinaryHeap, LruCache, IntervalTree).
+dotnet_diagnostic.CA1710.severity = none

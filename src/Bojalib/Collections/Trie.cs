@@ -26,7 +26,6 @@ namespace Bojalib.Collections;
 /// </remarks>
 /// <typeparam name="TValue">The value type.</typeparam>
 [DebuggerDisplay("Count = {Count}")]
-[SuppressMessage("Naming", "CA1710:Identifiers should have correct suffix", Justification = "'Trie' is the established name of this data structure.")]
 public sealed partial class Trie<TValue> : IReadOnlyDictionary<string, TValue>
 {
     private const int Root = 0;

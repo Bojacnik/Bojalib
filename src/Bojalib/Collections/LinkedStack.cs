@@ -1,8 +1,28 @@
 using System.Collections;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 namespace Bojalib.Collections;
+
+/// <summary>Enables collection expressions for <see cref="LinkedStack{T}"/>: items are pushed in order, so the last item ends up on top.</summary>
+public static class LinkedStack
+{
+    /// <summary>Creates a linked stack from <paramref name="items"/>; items are pushed in order, so the last item ends up on top.</summary>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="items">The items.</param>
+    /// <returns>The new collection.</returns>
+    public static LinkedStack<T> Create<T>(ReadOnlySpan<T> items)
+    {
+        var collection = new LinkedStack<T>();
+        foreach (T item in items)
+        {
+            collection.Push(item);
+        }
+
+        return collection;
+    }
+}
 
 /// <summary>
 /// Last-in-first-out collection backed by a singly linked list. Every operation is O(1) and never copies,
@@ -10,6 +30,7 @@ namespace Bojalib.Collections;
 /// </summary>
 /// <typeparam name="T">The element type.</typeparam>
 [DebuggerDisplay("Count = {Count}")]
+[CollectionBuilder(typeof(LinkedStack), nameof(LinkedStack.Create))]
 public sealed class LinkedStack<T> : IReadOnlyCollection<T>
 {
     private Node? _head;

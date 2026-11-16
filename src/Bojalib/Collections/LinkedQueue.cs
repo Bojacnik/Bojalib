@@ -1,8 +1,28 @@
 using System.Collections;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 namespace Bojalib.Collections;
+
+/// <summary>Enables collection expressions for <see cref="LinkedQueue{T}"/>: items are enqueued in order, so the first item is at the front.</summary>
+public static class LinkedQueue
+{
+    /// <summary>Creates a linked queue from <paramref name="items"/>; items are enqueued in order, so the first item is at the front.</summary>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="items">The items.</param>
+    /// <returns>The new collection.</returns>
+    public static LinkedQueue<T> Create<T>(ReadOnlySpan<T> items)
+    {
+        var collection = new LinkedQueue<T>();
+        foreach (T item in items)
+        {
+            collection.Enqueue(item);
+        }
+
+        return collection;
+    }
+}
 
 /// <summary>
 /// First-in-first-out collection backed by a singly linked list. Every operation is O(1) and never copies,
@@ -10,6 +30,7 @@ namespace Bojalib.Collections;
 /// </summary>
 /// <typeparam name="T">The element type.</typeparam>
 [DebuggerDisplay("Count = {Count}")]
+[CollectionBuilder(typeof(LinkedQueue), nameof(LinkedQueue.Create))]
 public sealed class LinkedQueue<T> : IReadOnlyCollection<T>
 {
     private Node? _head;

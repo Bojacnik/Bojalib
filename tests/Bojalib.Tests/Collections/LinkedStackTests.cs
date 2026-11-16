@@ -155,4 +155,13 @@ public class LinkedStackTests
 
         act.Should().Throw<InvalidOperationException>();
     }
+
+    [Test]
+    public void CollectionExpression_LastItemOnTop()
+    {
+        LinkedStack<int> stack = [1, 2, 3];
+
+        stack.Pop().Should().Be(3);
+        stack.Count.Should().Be(2);
+    }
 }
