@@ -21,14 +21,22 @@ public class Node<TData> : IEqualityComparer<Node<TData>>, IComparable<Node<TDat
         Children.AddRange(children);
     }
 
+    /// <summary>Structural equality: same data and equal children, in order, recursively.</summary>
     public bool Equals(Node<TData>? x, Node<TData>? y)
     {
-        return x != null && y != null && x.Data.Equals(y.Data) && x.Children.Equals(y.Children);
+        if (ReferenceEquals(x, y))
+        {
+            return true;
+        }
+
+        return x is not null && y is not null
+            && x.Data.Equals(y.Data)
+            && x.Children.SequenceEqual(y.Children, this);
     }
 
     public int GetHashCode(Node<TData> obj)
     {
-        return HashCode.Combine(obj.Data, obj.Children);
+        return HashCode.Combine(obj.Data, obj.Children.Count);
     }
 
     public int CompareTo(Node<TData>? other)
@@ -36,12 +44,19 @@ public class Node<TData> : IEqualityComparer<Node<TData>>, IComparable<Node<TDat
         return Data.CompareTo(other?.Data);
     }
 
+    /// <summary>Enumerates this node and all of its descendants, depth-first (pre-order).</summary>
     public IEnumerator<Node<TData>> GetEnumerator()
     {
-        yield return this;
-        foreach (Node<TData> child in Children)
+        var pending = new Stack<Node<TData>>();
+        pending.Push(this);
+        while (pending.Count > 0)
         {
-            yield return child;
+            Node<TData> node = pending.Pop();
+            yield return node;
+            for (int i = node.Children.Count - 1; i >= 0; i--)
+            {
+                pending.Push(node.Children[i]);
+            }
         }
     }
 

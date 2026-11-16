@@ -1,3 +1,3 @@
-﻿namespace Bojalib.Collections.Exceptions;
+namespace Bojalib.Collections.Exceptions;
 
-public class StackEmptyException() : Exception("Stack is empty!");
+public class StackEmptyException() : InvalidOperationException("Stack is empty!");

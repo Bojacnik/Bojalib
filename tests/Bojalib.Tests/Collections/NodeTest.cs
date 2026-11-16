@@ -19,6 +19,35 @@ public class NodeTest
     }
 
     [Test]
+    public void Enumerate_YieldsAllDescendantsDepthFirst()
+    {
+        var root = new Node<string>("a",
+            new Node<string>("b", new Node<string>("c"), new Node<string>("d")),
+            new Node<string>("e", new Node<string>("f")));
+
+        root.Select(node => node.Data).Should().Equal("a", "b", "c", "d", "e", "f");
+    }
+
+    [Test]
+    public void Equals_StructurallyEqualTrees_ReturnsTrue()
+    {
+        var x = new Node<string>("a", new Node<string>("b", new Node<string>("c")));
+        var y = new Node<string>("a", new Node<string>("b", new Node<string>("c")));
+
+        x.Equals(x, y).Should().BeTrue();
+        x.GetHashCode(x).Should().Be(x.GetHashCode(y));
+    }
+
+    [Test]
+    public void Equals_DifferentGrandchild_ReturnsFalse()
+    {
+        var x = new Node<string>("a", new Node<string>("b", new Node<string>("c")));
+        var y = new Node<string>("a", new Node<string>("b", new Node<string>("X")));
+
+        x.Equals(x, y).Should().BeFalse();
+    }
+
+    [Test]
     public void CompareTo_ComparesByData()
     {
         new Node<string>("a").CompareTo(new Node<string>("b")).Should().BeNegative();

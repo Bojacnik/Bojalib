@@ -34,6 +34,46 @@ public class LocateTest
     }
 
     [Test]
+    public void DirectoriesRecursively_SymlinkLoop_IsNotFollowed()
+    {
+        string a = Directory.CreateDirectory(Path.Combine(_root, "a")).FullName;
+        string loop1 = Path.Combine(a, "loop1");
+        string loop2 = Path.Combine(a, "loop2");
+        Directory.CreateSymbolicLink(loop1, _root);
+        Directory.CreateSymbolicLink(loop2, _root);
+
+        List<string> result = Locate.DirectoriesRecursively(_root);
+
+        // The links themselves are listed, but never descended into.
+        result.Should().BeEquivalentTo([_root, a, loop1, loop2]);
+    }
+
+    [Test]
+    public void DirectoriesRecursively_IncludesHiddenDirectories()
+    {
+        string hidden = Directory.CreateDirectory(Path.Combine(_root, ".hidden")).FullName;
+        File.SetAttributes(hidden, File.GetAttributes(hidden) | FileAttributes.Hidden);
+
+        Locate.DirectoriesRecursively(_root).Should().Contain(hidden);
+    }
+
+    [Test]
+    public void DirectoriesRecursively_RelativePath_ReturnsRelativePaths()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, "a", "b"));
+        string previous = Directory.GetCurrentDirectory();
+        Directory.SetCurrentDirectory(_root);
+        try
+        {
+            Locate.DirectoriesRecursively("a").Should().BeEquivalentTo(["a", Path.Combine("a", "b")]);
+        }
+        finally
+        {
+            Directory.SetCurrentDirectory(previous);
+        }
+    }
+
+    [Test]
     public void DirectoriesRecursively_NoSubdirectories_ReturnsOnlyRoot()
     {
         Locate.DirectoriesRecursively(_root).Should().Equal(_root);

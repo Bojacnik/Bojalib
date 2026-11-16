@@ -2,14 +2,18 @@ namespace Bojalib.Sorting;
 
 public static class Quicksort
 {
-    /// <summary>Sorts <paramref name="array"/> in place, ascending.</summary>
-    public static void Sort<T>(T[] array) where T : IComparable<T>
+    /// <summary>Sorts <paramref name="array"/> in place, ascending. <see langword="null"/> elements sort first.</summary>
+    public static void Sort<T>(T[] array) where T : IComparable<T>? => Sort(array, Comparer<T>.Default);
+
+    /// <summary>Sorts <paramref name="array"/> in place using <paramref name="comparer"/>.</summary>
+    public static void Sort<T>(T[] array, IComparer<T> comparer)
     {
         ArgumentNullException.ThrowIfNull(array);
-        Sort(array, 0, array.Length - 1);
+        ArgumentNullException.ThrowIfNull(comparer);
+        Sort(array, 0, array.Length - 1, comparer);
     }
 
-    private static void Sort<T>(T[] array, int left, int right) where T : IComparable<T>
+    private static void Sort<T>(T[] array, int left, int right, IComparer<T> comparer)
     {
         while (left < right)
         {
@@ -18,12 +22,12 @@ public static class Quicksort
 
             while (i <= j)
             {
-                while (array[i].CompareTo(pivot) < 0)
+                while (comparer.Compare(array[i], pivot) < 0)
                 {
                     i++;
                 }
 
-                while (array[j].CompareTo(pivot) > 0)
+                while (comparer.Compare(array[j], pivot) > 0)
                 {
                     j--;
                 }
@@ -38,8 +42,18 @@ public static class Quicksort
                 j--;
             }
 
-            Sort(array, left, j);
-            left = i;
+            // Recurse into the smaller half and loop on the larger one,
+            // so stack depth stays O(log n) even for bad pivots.
+            if (j - left < right - i)
+            {
+                Sort(array, left, j, comparer);
+                left = i;
+            }
+            else
+            {
+                Sort(array, i, right, comparer);
+                right = j;
+            }
         }
     }
 }

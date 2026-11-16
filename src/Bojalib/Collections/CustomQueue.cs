@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using Bojalib.Collections.Exceptions;
 
 namespace Bojalib.Collections;
@@ -23,6 +23,12 @@ public class CustomQueue<TData> : IEnumerable<TData>
 
         TData result = _front.Data;
         _front = _front.Next;
+        if (_front is null)
+        {
+            // Don't keep the last dequeued item alive through _end.
+            _end = null;
+        }
+
         return result;
     }
 

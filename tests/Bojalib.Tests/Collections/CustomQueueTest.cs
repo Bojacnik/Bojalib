@@ -34,12 +34,34 @@ public class CustomQueueTest
     }
 
     [Test]
+    public void Dequeue_LastItem_DoesNotKeepItAlive()
+    {
+        var queue = new CustomQueue<object>();
+        WeakReference reference = EnqueueAndDequeue(queue);
+
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+
+        reference.IsAlive.Should().BeFalse();
+    }
+
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private static WeakReference EnqueueAndDequeue(CustomQueue<object> queue)
+    {
+        var item = new object();
+        queue.Enqueue(item);
+        queue.Dequeue();
+        return new WeakReference(item);
+    }
+
+    [Test]
     public void Dequeue_Empty_ThrowsQueueEmptyException()
     {
         var queue = new CustomQueue<int>();
 
         Action act = () => queue.Dequeue();
 
-        act.Should().Throw<QueueEmptyException>();
+        act.Should().Throw<QueueEmptyException>().Which.Should().BeAssignableTo<InvalidOperationException>();
     }
 }
