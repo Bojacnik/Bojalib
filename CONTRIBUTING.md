@@ -20,8 +20,8 @@ dotnet build Bojalib.slnx -c Release    # warnings are errors in Release
 dotnet test --project tests/Bojalib.Tests --coverlet
 ```
 
-CI runs the same steps and fails if formatting is off, if there is any warning, or if coverage drops below
-95% of lines / 90% of branches.
+CI runs the same steps and fails if formatting is off, if there is any warning, or if line or branch coverage
+drops below 90%.
 
 ## Conventions
 

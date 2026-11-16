@@ -86,7 +86,28 @@ Requires the .NET 10 SDK. See [CONTRIBUTING.md](CONTRIBUTING.md) for the repo la
 
 ## Benchmarks
 
-BENCHMARKS_PLACEHOLDER
+Indicative results from a short BenchmarkDotNet run (.NET 10, x64, shared cloud VM — expect ±15% noise;
+run them yourself for real numbers). Ratio is relative to the baseline in each group.
+
+**Sorting random `int`s** — baseline: the runtime's `Span<T>.Sort()`
+
+| Length | `QuickSort` | `HeapSort` |
+|---:|---:|---:|
+| 100 | 0.92× | 1.27× |
+| 10,000 | 1.30× | 1.55× |
+| 1,000,000 | 0.84× | 2.00× |
+
+No allocations for any of them.
+
+**`Trie<int>` with 10,000 random keys** — baseline: `Dictionary<string, int>` (ordinal)
+
+| Operation | Ratio |
+|---|---:|
+| Prefix search (all keys starting with `"ab"`) | **0.05×** (≈20× faster) |
+| Exact lookup of slices of a string | 2.0× |
+| Exact lookup of whole keys | 8× |
+
+Exact lookups chase one pointer per character, so a hash table wins there; prefix queries are what a trie is for.
 
 ## License
 

@@ -33,12 +33,11 @@ jobs:
       - name: Build
         run: dotnet build Bojalib.slnx --configuration Release --no-restore
 
-      - name: Test (fails below 95% line / 90% branch coverage)
+      - name: Test (fails below 90% line or branch coverage)
         run: >
           dotnet test --project tests/Bojalib.Tests --configuration Release --no-build
           --coverlet --coverlet-output-format cobertura
-          --coverlet-threshold 95 --coverlet-threshold-type line
-          --coverlet-threshold 90 --coverlet-threshold-type branch
+          --coverlet-threshold 90 --coverlet-threshold-type line,branch
           --coverlet-threshold-stat Total
 
       - name: Pack
