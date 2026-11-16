@@ -12,14 +12,10 @@
     <File Path=".github/workflows/ci.yml" />
   </Folder>
   <Folder Name="/src/">
-    <Project Path="src/Bojalib.Core/Bojalib.Core.csproj" />
-    <Project Path="src/Bojalib.Core.Collections/Bojalib.Core.Collections.csproj" />
-    <Project Path="src/Bojalib.Core.Collections.Generic/Bojalib.Core.Collections.Generic.csproj" />
-    <Project Path="src/Bojalib.Core.IO/Bojalib.Core.IO.csproj" />
-    <Project Path="src/Bojalib.Core.Sorting/Bojalib.Core.Sorting.csproj" />
+    <Project Path="src/Bojalib/Bojalib.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <File Path="tests/Directory.Build.props" />
-    <Project Path="tests/Bojalib.Tests.Core/Bojalib.Tests.Core.csproj" />
+    <Project Path="tests/Bojalib.Tests/Bojalib.Tests.csproj" />
   </Folder>
 </Solution>

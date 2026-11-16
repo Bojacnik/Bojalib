@@ -1,6 +1,6 @@
-﻿using Bojalib.Core.Collections.Generic.Exceptions;
+using Bojalib.Collections.Exceptions;
 
-namespace Bojalib.Core.Collections.Generic;
+namespace Bojalib.Collections;
 
 public class Stack<TData>
 {
@@ -21,8 +21,7 @@ public class Stack<TData>
 
     public void Push(TData data)
     {
-        if (_head != null) 
-            _head = new StackItem(data, _head);
+        _head = new StackItem(data, _head);
     }
 
     public TData Pop()

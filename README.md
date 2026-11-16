@@ -10,13 +10,12 @@ Directory.Build.props        # shared build settings + NuGet metadata
 Directory.Packages.props     # central package versions
 global.json                  # pinned SDK (rolls forward to newer majors)
 src/
-  Bojalib.Core/                      # umbrella package (PackageId: Bojalib)
-  Bojalib.Core.Collections/
-  Bojalib.Core.Collections.Generic/  # Stack, CustomQueue, TrieTree, Node
-  Bojalib.Core.IO/                   # Locate helpers
-  Bojalib.Core.Sorting/              # Quicksort, Bubblesort
+  Bojalib/                   # the library (PackageId: Bojalib)
+    Collections/             # Stack, CustomQueue, TrieTree, Node
+    IO/                      # Locate helpers
+    Sorting/                 # Quicksort, Bubblesort (generic over IComparable<T>)
 tests/
-  Bojalib.Tests.Core/                # NUnit tests
+  Bojalib.Tests/             # NUnit tests, folders mirror src/Bojalib
 ```
 
 ## Build & test

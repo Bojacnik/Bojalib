@@ -1,7 +1,7 @@
 ﻿using System.Collections;
-using Bojalib.Core.Collections.Generic.Exceptions;
+using Bojalib.Collections.Exceptions;
 
-namespace Bojalib.Core.Collections.Generic;
+namespace Bojalib.Collections;
 
 public class CustomQueue<TData> : IEnumerable<TData>
 {

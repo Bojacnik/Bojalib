@@ -1,6 +1,7 @@
-﻿using System.Collections;
+using System.Collections;
+using System.Diagnostics.CodeAnalysis;
 
-namespace Bojalib.Core.Collections.Generic;
+namespace Bojalib.Collections;
 
 public class Node<TData> : IEqualityComparer<Node<TData>>, IComparable<Node<TData>>, IEnumerable<Node<TData>>
     where TData : class, IEquatable<TData>, IComparable<TData>
@@ -12,6 +13,7 @@ public class Node<TData> : IEqualityComparer<Node<TData>>, IComparable<Node<TDat
     {
     }
 
+    [SetsRequiredMembers]
     public Node(TData data, params Node<TData>[] children)
     {
         Data = data;

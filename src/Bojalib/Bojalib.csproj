@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PackageId>Bojalib</PackageId>
+    <Description>Personal library of data structures, sorting algorithms and utilities.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Bojalib.Tests" />
+  </ItemGroup>
+
+</Project>

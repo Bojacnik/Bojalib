@@ -1,4 +1,4 @@
-﻿namespace Bojalib.Core.Collections.Generic;
+﻿namespace Bojalib.Collections;
 
 public record TrieNode<TData>
 {

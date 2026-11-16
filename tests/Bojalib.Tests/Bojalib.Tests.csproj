@@ -1,9 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <RootNamespace>Bojalib.Tests</RootNamespace>
-  </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="coverlet.collector" />
     <PackageReference Include="FluentAssertions" />
@@ -18,8 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Bojalib.Core.Collections.Generic\Bojalib.Core.Collections.Generic.csproj" />
-    <ProjectReference Include="..\..\src\Bojalib.Core.Sorting\Bojalib.Core.Sorting.csproj" />
+    <ProjectReference Include="..\..\src\Bojalib\Bojalib.csproj" />
   </ItemGroup>
 
 </Project>

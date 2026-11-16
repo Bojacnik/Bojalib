@@ -1,9 +1,9 @@
-﻿namespace Bojalib.Core.IO;
+namespace Bojalib.IO;
 
 public static class Locate
 {
     /// <summary>
-    /// Returns a list with all subdirectories including the path directory. If none are found an empty list is returned.
+    /// Returns <paramref name="path"/> followed by all of its subdirectories, recursively.
     /// </summary>
     /// <param name="path"></param>
     /// <returns></returns>
@@ -12,7 +12,7 @@ public static class Locate
         var paths = new List<string> { path };
         foreach (string dir in Directory.GetDirectories(path))
         {
-            DirectoriesRecursively(dir);
+            paths.AddRange(DirectoriesRecursively(dir));
         }
 
         return paths;

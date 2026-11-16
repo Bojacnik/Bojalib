@@ -1,3 +1,3 @@
-﻿namespace Bojalib.Core.Collections.Generic.Exceptions;
+﻿namespace Bojalib.Collections.Exceptions;
 
 public class QueueEmptyException() : Exception("Queue is empty!");

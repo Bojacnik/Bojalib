@@ -1,7 +1,7 @@
-﻿using Bojalib.Core.Collections.Generic;
+﻿using Bojalib.Collections;
 using FluentAssertions;
 
-namespace Bojalib.Tests.Collections.Generic;
+namespace Bojalib.Tests.Collections;
 
 public enum Token
 {
