@@ -1,0 +1,48 @@
+# Dependabot version updates
+# https://docs.github.com/code-security/dependabot/working-with-dependabot/dependabot-options-reference
+version: 2
+
+updates:
+  # NuGet packages (versions live in Directory.Packages.props)
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      # One PR per week for all minor/patch bumps of the test stack
+      test-dependencies:
+        patterns:
+          - "AwesomeAssertions"
+          - "coverlet.*"
+          - "Microsoft.NET.Test.Sdk"
+          - "NUnit*"
+        update-types: [minor, patch]
+
+  # .NET SDK pinned in global.json
+  - package-ecosystem: dotnet-sdk
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "chore(deps)"
+    ignore:
+      # Projects target net9.0; move to a new major SDK deliberately
+      - dependency-name: "*"
+        update-types: [version-update:semver-major]
+
+  # Actions used in .github/workflows
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "chore(ci)"
+    groups:
+      github-actions:
+        patterns: ["*"]

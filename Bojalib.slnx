@@ -8,6 +8,9 @@
     <File Path="global.json" />
     <File Path="README.md" />
   </Folder>
+  <Folder Name="/.github/">
+    <File Path=".github/dependabot.yml" />
+  </Folder>
   <Folder Name="/.github/workflows/">
     <File Path=".github/workflows/ci.yml" />
   </Folder>
