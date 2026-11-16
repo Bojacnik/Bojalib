@@ -1,8 +1,8 @@
-using Bojalib.Collections;
 using Bojalib.Hashing;
+using Bojalib.Probabilistic;
 using CsCheck;
 
-namespace Bojalib.Tests.Collections;
+namespace Bojalib.Tests.Probabilistic;
 
 public class XxHash64Tests
 {

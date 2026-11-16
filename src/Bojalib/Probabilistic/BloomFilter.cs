@@ -7,7 +7,7 @@ using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 using Bojalib.Hashing;
 
-namespace Bojalib.Collections;
+namespace Bojalib.Probabilistic;
 
 /// <summary>
 /// A space-efficient set that can say "definitely not present" or "probably present": no false negatives, and a
@@ -70,9 +70,7 @@ public sealed class BloomFilter<T>
     /// Gets whether the hashes don't depend on the process, so <see cref="ToBytes"/> output is meaningful elsewhere:
     /// true for strings, built-in primitives, enums and filters with a custom hasher.
     /// </summary>
-    public bool IsPortable => _hasher is not null || UsesStableHash;
-
-    private static bool UsesStableHash => typeof(T) == typeof(string) || typeof(T).IsPrimitive || typeof(T).IsEnum;
+    public bool IsPortable => ItemHasher<T>.IsPortable(_hasher);
 
     /// <summary>Adds <paramref name="item"/>.</summary>
     /// <param name="item">The item.</param>
@@ -193,30 +191,7 @@ public sealed class BloomFilter<T>
         return (int)Math.Clamp(blocks, 1, int.MaxValue / BytesPerBlock);
     }
 
-    private ulong Hash(T item)
-    {
-        if (_hasher is not null)
-        {
-            return _hasher(item);
-        }
-
-        if (typeof(T) == typeof(string))
-        {
-            return XxHash64.Hash(((string)(object)item!).AsSpan());
-        }
-
-        if (UsesStableHash)
-        {
-            // Primitives and enums have no padding, so their raw bytes are a stable representation.
-            return XxHash64.Hash(MemoryMarshal.CreateReadOnlySpan(ref Unsafe.As<T, byte>(ref item), Unsafe.SizeOf<T>()));
-        }
-
-        // Spread a 32-bit hash over 64 bits (a SplitMix64 finalizer).
-        ulong h = (ulong)(item is null ? 0 : EqualityComparer<T>.Default.GetHashCode(item));
-        h = (h ^ (h >> 30)) * 0xbf58476d1ce4e5b9UL;
-        h = (h ^ (h >> 27)) * 0x94d049bb133111ebUL;
-        return h ^ (h >> 31);
-    }
+    private ulong Hash(T item) => ItemHasher<T>.Hash(item, _hasher);
 
     // The upper 32 bits pick the block (multiply-shift instead of modulo), the lower 32 bits pick the bits in it.
     private Span<uint> Block(ulong hash)

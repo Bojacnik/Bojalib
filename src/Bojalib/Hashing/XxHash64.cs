@@ -6,7 +6,7 @@ namespace Bojalib.Hashing;
 
 /// <summary>
 /// The XXH64 non-cryptographic hash (Yann Collet), stable across processes and machines, so saved
-/// <see cref="Collections.BloomFilter{T}"/>s stay valid. Internal: kept in-house so the package has no dependencies;
+/// <see cref="Probabilistic.BloomFilter{T}"/>s stay valid. Internal: kept in-house so the package has no dependencies;
 /// callers who need a public xxHash should use System.IO.Hashing.
 /// </summary>
 /// <remarks>Produces the same values as the reference implementation and <c>System.IO.Hashing.XxHash64</c>.</remarks>
