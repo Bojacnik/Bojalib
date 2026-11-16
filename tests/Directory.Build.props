@@ -10,8 +10,8 @@
     <!-- Run on Microsoft.Testing.Platform: the test project is its own executable. -->
     <OutputType>Exe</OutputType>
     <EnableNUnitRunner>true</EnableNUnitRunner>
-    <!-- Test method names use underscores (Method_Scenario_Result). -->
-    <NoWarn>$(NoWarn);CA1707</NoWarn>
+    <!-- Test names use underscores (Method_Scenario_Result); tests deliberately call through interfaces. -->
+    <NoWarn>$(NoWarn);CA1707;CA1859</NoWarn>
   </PropertyGroup>
 
 </Project>
