@@ -7,13 +7,20 @@ using System.Runtime.InteropServices;
 namespace Bojalib.Collections;
 
 /// <summary>
-/// Fixed-capacity cache that evicts the least recently used entry when full. Every operation is O(1) and, once the
-/// cache is full, allocation-free: entries live in preallocated arrays linked by index, and a hit costs one hash
-/// lookup plus a few index writes.
+/// Single-threaded, allocation-free least-recently-used cache: when full, adding evicts the entry that was used
+/// longest ago. Every operation is O(1) — one hash lookup plus a few index writes — and once full it never allocates.
 /// </summary>
 /// <remarks>
-/// Not thread-safe. Reading with <see cref="TryGetValue(TKey, out TValue)"/> or the indexer counts as a use;
-/// <see cref="TryPeek"/> and <see cref="ContainsKey"/> don't. Enumeration goes from most to least recently used.
+/// <para>
+/// Built for hot single-threaded paths (parsers, compilers, game loops, per-request work). It is <b>not</b>
+/// thread-safe; for a cache shared between threads use a concurrent cache library such as BitFaster.Caching, or
+/// <c>Microsoft.Extensions.Caching.Memory</c> when you need expiry.
+/// </para>
+/// <para>
+/// Eviction is exact LRU. Reading with <see cref="TryGetValue(TKey, out TValue)"/> or the indexer counts as a use;
+/// <see cref="TryPeek"/> and <see cref="ContainsKey"/> don't. String-keyed caches can be read with a
+/// <see cref="ReadOnlySpan{T}"/> key without allocating. Enumeration goes from most to least recently used.
+/// </para>
 /// </remarks>
 /// <typeparam name="TKey">The key type.</typeparam>
 /// <typeparam name="TValue">The value type.</typeparam>

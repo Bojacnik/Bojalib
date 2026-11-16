@@ -5,12 +5,12 @@ using System.Runtime.CompilerServices;
 namespace Bojalib.Hashing;
 
 /// <summary>
-/// The XXH64 non-cryptographic hash (Yann Collet): very fast and stable across processes, machines and .NET versions —
-/// unlike <see cref="object.GetHashCode"/>, which is randomized per process. Use it for hashes that are stored,
-/// sent elsewhere, or used to build data structures that are saved (e.g. <see cref="Collections.BloomFilter{T}"/>).
+/// The XXH64 non-cryptographic hash (Yann Collet), stable across processes and machines, so saved
+/// <see cref="Collections.BloomFilter{T}"/>s stay valid. Internal: kept in-house so the package has no dependencies;
+/// callers who need a public xxHash should use System.IO.Hashing.
 /// </summary>
 /// <remarks>Produces the same values as the reference implementation and <c>System.IO.Hashing.XxHash64</c>.</remarks>
-public static class XxHash64
+internal static class XxHash64
 {
     private const ulong Prime1 = 0x9E3779B185EBCA87UL;
     private const ulong Prime2 = 0xC2B2AE3D27D4EB4FUL;

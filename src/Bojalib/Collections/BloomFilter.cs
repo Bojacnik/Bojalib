@@ -18,7 +18,7 @@ namespace Bojalib.Collections;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Strings and built-in primitive types are hashed with <see cref="XxHash64"/>, which is stable across processes,
+/// Strings and built-in primitive types are hashed with XXH64, which is stable across processes,
 /// so <see cref="ToBytes"/> / <see cref="FromBytes"/> round-trip between machines (<see cref="IsPortable"/>).
 /// Other types use <see cref="EqualityComparer{T}.Default"/> unless a hash function is supplied.
 /// </para>

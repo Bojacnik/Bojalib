@@ -18,14 +18,12 @@ are deprecated — install `Bojalib` instead. Trimmed / Native AOT publishes onl
 | `Bojalib.Core.Sorting.Sorting` namespace | `Bojalib.Sorting` |
 | `Bojalib.Core.IO` namespace | `Bojalib.IO` |
 | `TrieTree<T>` (`InsertWord`, `FindWord`) | `Trie<TValue>` (indexer, `Add`, `TryGetValue`, …) |
-| `Node<T>` (`Data`, `Children` list) | `TreeNode<T>` (`Value`, `AddChild`, `DepthFirst`, …) |
-| `Stack<T>` | `LinkedStack<T>` |
-| `CustomQueue<T>` (`IsEmpty()`) | `LinkedQueue<T>` (`IsEmpty`, `Count`, …) |
-| `StackEmptyException`, `QueueEmptyException` | `InvalidOperationException`, or use `TryPop` / `TryDequeue` |
+| `Node<T>` | Removed. Use your own node type with the `Tree` traversal helpers |
+| `Stack<T>`, `CustomQueue<T>` | Removed. Use `System.Collections.Generic.Stack<T>` / `Queue<T>`, or `Deque<T>` |
+| `StackEmptyException`, `QueueEmptyException` | Removed with the types above |
 | `Quicksort.Sort(int[])` | `QuickSort.Sort<T>(Span<T>)` — arrays still work as-is |
 | `Bubblesort.Sort(int[])` | `BubbleSort.Sort<T>(Span<T>)` |
-| `Locate.DirectoriesRecursively(path)` → `List<string>` incl. root | `Locate.Directories(path)` → lazy, excludes root |
-| `Locate.Files(dir)` → `List<string>` | `Locate.Files(dir, recursive)` → lazy |
+| `Locate` | Removed: `Directory.EnumerateDirectories` / `FileSystemEnumerable` cover it |
 
 Requires .NET 10.
 
@@ -42,29 +40,19 @@ Requires .NET 10.
   - `Trie<TValue>`: a radix tree implementing `IReadOnlyDictionary<string, TValue>`; span lookups; `ignoreCase`;
     `ContainsPrefix`, `EnumeratePrefix`, `TryMatchLongestPrefix`, `EnumerateMatches` (wildcards),
     `EnumerateFuzzy` (edit distance); allocation-free enumeration.
-  - `BinaryHeap<T>`, `IndexedPriorityQueue<TKey, TPriority>`, `LruCache<TKey, TValue>`, `RingBuffer<T>`,
-    `BloomFilter<T>`, `IntervalTree<TPoint, TValue>`, `DisjointSet` / `DisjointSet<T>`.
-  - `TreeNode<T>`: `Parent`, `Root`, `Depth`, `Height`, `IsRoot`, `IsLeaf`, `AddChild`, `RemoveChild`, `Find`,
-    `GetPath`, and allocation-free `DepthFirst`, `PostOrder`, `Leaves`, `Ancestors` plus pooled `BreadthFirst`.
-    Adding a node that already has a parent or would form a cycle throws.
-  - `LinkedStack<T>` / `LinkedQueue<T>`: `Count`, `IsEmpty`, `Peek`, `TryPeek`, `TryPop` / `TryDequeue`, `Clear`,
-    allocation-free enumerators that detect modification.
-  - Collection expressions for `LinkedStack`, `LinkedQueue`, `BinaryHeap` and `RingBuffer`.
-- **Hashing:** `XxHash64` (identical output to `System.IO.Hashing.XxHash64`).
-- **IO:** `Locate.Files(path, recursive: true)`.
+  - `IndexedPriorityQueue<TKey, TPriority>`, `Deque<T>`, `CircularBuffer<T>`, `BloomFilter<T>`,
+    `IntervalTree<TPoint, TValue>`, `DisjointSet` / `DisjointSet<T>`, `LruCache<TKey, TValue>` (single-threaded).
+  - `Tree`: `DepthFirst`, `PostOrder`, `BreadthFirst`, `Leaves`, `TryFind`, `TryFindPath`, `Count`, `Height` over any
+    node type, given a children function. Pooled stack/queue, no recursion.
+  - Collection expressions for `Deque` and `CircularBuffer`.
 - Trimming and Native AOT compatible.
 
-### Changed
-- `Locate` searches are lazy and throw `DirectoryNotFoundException` immediately for a missing directory.
-
 ### Fixed
-- `Stack.Push` never stored anything.
-- `Locate.DirectoriesRecursively` dropped nested directories, followed symbolic links (a link loop made it run
-  forever), and threw on unreadable directories. Links are now listed but not followed, unreadable directories are
-  skipped and hidden directories are included.
+- `Stack.Push` never stored anything (the type is removed in 2.0).
+- `Locate.DirectoriesRecursively` dropped nested directories and looped forever on symbolic link cycles (the type
+  is removed in 2.0).
 - `Quicksort` mis-sorted types whose `CompareTo` returns values other than -1/0/1.
 - Sorting threw `NullReferenceException` on `null` elements; they now sort first.
 - `TrieTree.FindWord` returned `default` for missing words and prefixes, indistinguishable from a stored default
   value such as the first enum member; empty-string keys were silently dropped; `with` copies shared state.
-- `Node` could not be constructed, compared children by reference, and only enumerated direct children.
-- `CustomQueue` kept the last dequeued item alive.
+- `Node` could not be constructed and only enumerated direct children (replaced by `Tree` in 2.0).

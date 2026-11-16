@@ -3,8 +3,9 @@
 [![CI](https://github.com/Bojacnik/Bojalib/actions/workflows/ci.yml/badge.svg)](https://github.com/Bojacnik/Bojalib/actions/workflows/ci.yml)
 [![NuGet](https://img.shields.io/nuget/v/Bojalib.svg)](https://www.nuget.org/packages/Bojalib)
 
-High-performance data structures and sorting algorithms for .NET 10: SIMD where it pays, allocation-free
-enumeration, no dependencies. Trimming and Native AOT compatible.
+Fast algorithms and specialized data structures that .NET doesn't include: SIMD sorting, radix tries with fuzzy
+search, decrease-key priority queues, deques, Bloom filters, interval trees and more. Allocation-free where it
+matters, no dependencies, trimming and Native AOT compatible.
 
 ```sh
 dotnet add package Bojalib
@@ -21,17 +22,14 @@ dotnet add package Bojalib
 | | `Selection` | n-th element (median, percentiles) and partial sort (top-k) without a full sort |
 | | `SortedSpan` | Branchless `LowerBound` / `UpperBound` / `EqualRange`, SIMD `IsSorted` |
 | `Bojalib.Collections` | `Trie<TValue>` | Prefix queries, longest-prefix match, wildcard and fuzzy (edit-distance) search |
-| | `BinaryHeap<T>` | Priority queue (4-ary heap) with `PushPop` |
 | | `IndexedPriorityQueue<TKey, TPriority>` | Priority queue with O(log n) `UpdatePriority` / `Remove` (Dijkstra, A*) |
-| | `LruCache<TKey, TValue>` | O(1), allocation-free least-recently-used cache |
-| | `RingBuffer<T>` | Fixed-capacity deque / sliding window with zero-copy span access |
+| | `Deque<T>` | Double-ended queue with O(1) indexing (.NET has none) |
+| | `CircularBuffer<T>` | Fixed-capacity sliding window that overwrites the oldest item |
 | | `BloomFilter<T>` | SIMD split-block Bloom filter, serializable |
 | | `IntervalTree<TPoint, TValue>` | Which intervals contain a point / overlap a range |
 | | `DisjointSet`, `DisjointSet<T>` | Union-find |
-| | `TreeNode<T>` | General tree with allocation-free traversals |
-| | `LinkedStack<T>`, `LinkedQueue<T>` | Stack/queue that never resize |
-| `Bojalib.Hashing` | `XxHash64` | Fast hash that is stable across processes |
-| `Bojalib.IO` | `Locate` | Lazy recursive directory/file search that can't hang on symlink loops |
+| | `LruCache<TKey, TValue>` | Single-threaded, allocation-free LRU cache for hot paths |
+| | `Tree` | Depth-first, breadth-first, post-order and leaf traversals of *your own* node types |
 
 ## Sorting
 
@@ -76,10 +74,11 @@ keywords.TryMatchLongestPrefix(source.AsSpan(position), out int length, out Toke
 var frontier = new IndexedPriorityQueue<Node, int>();
 frontier.EnqueueOrUpdate(neighbor, newDistance);
 
-// Caches and windows
-var cache = new LruCache<string, Page>(capacity: 1000, StringComparer.Ordinal);
-cache.TryGetValue(url.AsSpan(), out Page page);  // span lookup, no string allocated
-var lastSamples = new RingBuffer<double>(256, overwrite: true);
+// Deques and sliding windows
+var work = new Deque<Job>();
+work.PushFront(urgent);
+var lastSamples = new CircularBuffer<double>(100);   // keeps the 100 most recent
+double average = lastSamples.Average();
 
 // Probabilistic membership, savable to disk
 var seen = new BloomFilter<string>(expectedItems: 1_000_000, falsePositiveRate: 0.01);
@@ -88,6 +87,14 @@ byte[] saved = seen.ToBytes();
 // Calendars, genomic ranges, IP ranges, …
 var bookings = new IntervalTree<DateTime, string>(intervals);
 foreach (var booking in bookings.Query(start, end)) { … }
+
+// Walk any tree you already have: no wrapper types, no recursion, no allocations after warm-up
+foreach (Control c in Tree.DepthFirst(form, c => c.Controls.Cast<Control>())) { … }
+Tree.TryFindPath(syntaxRoot, n => n.ChildNodes(), n => n is MethodDeclarationSyntax, out var path);
+
+// Single-threaded hot-path cache (for shared caches use a concurrent library such as BitFaster.Caching)
+var cache = new LruCache<string, Token>(capacity: 1000, StringComparer.Ordinal);
+cache.TryGetValue(source.AsSpan(start, length), out Token token);  // span lookup, no string allocated
 ```
 
 ## Benchmarks

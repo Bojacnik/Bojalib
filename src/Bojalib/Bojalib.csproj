@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <PackageId>Bojalib</PackageId>
-    <Description>Allocation-conscious data structures (Trie, TreeNode, LinkedStack, LinkedQueue), span-based sorting algorithms and safe recursive file-system search.</Description>
+    <Description>High-performance algorithms and data structures the BCL lacks: SIMD pdqsort and radix sort, stable span sort, selection, radix-tree Trie with fuzzy search, indexed priority queue, deque, circular buffer, split-block Bloom filter, interval tree, union-find, tree traversals.</Description>
     <!-- Lets consumers' trimmed / Native AOT publishes drop the parts they don't use,
          and turns on the analyzers that warn if we write code that breaks that. -->
     <IsTrimmable>true</IsTrimmable>
