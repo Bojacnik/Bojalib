@@ -1,26 +1,62 @@
+using System.Buffers;
 using System.Collections;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Text;
+using System.Runtime.CompilerServices;
 
 namespace Bojalib.Collections;
 
 /// <summary>
-/// Prefix tree mapping string keys to values. Lookups cost O(key length) regardless of how many keys are stored,
-/// and all keys sharing a prefix can be enumerated without scanning the rest.
+/// Prefix tree mapping string keys to values. Lookups cost O(key length) regardless of how many keys are stored;
+/// all keys sharing a prefix can be enumerated without scanning the rest; and it supports longest-prefix matching,
+/// wildcard and fuzzy (edit-distance) search.
 /// </summary>
 /// <remarks>
-/// Keys are compared ordinally (char by char, case-sensitive) and enumerated in ordinal order.
-/// Lookup methods take <see cref="ReadOnlySpan{T}"/> so slices of larger strings can be looked up without allocating.
+/// <para>
+/// Implemented as a radix tree: chains of single-child nodes are merged into one edge labelled with several
+/// characters, so a lookup visits few nodes. Nodes are structs in one array and labels live in one shared character
+/// buffer, so the whole trie is a handful of objects. Child selection and label comparison use the runtime's
+/// vectorized span search.
+/// </para>
+/// <para>
+/// Keys are compared ordinally (or ordinal-ignore-case) and enumerated in that order. Lookups take
+/// <see cref="ReadOnlySpan{T}"/>, so slices of larger strings need no allocation. Enumerating keys returns the
+/// strings as they were added, without allocating.
+/// </para>
 /// </remarks>
 /// <typeparam name="TValue">The value type.</typeparam>
 [DebuggerDisplay("Count = {Count}")]
 [SuppressMessage("Naming", "CA1710:Identifiers should have correct suffix", Justification = "'Trie' is the established name of this data structure.")]
-public sealed class Trie<TValue> : IReadOnlyDictionary<string, TValue>
+public sealed partial class Trie<TValue> : IReadOnlyDictionary<string, TValue>
 {
-    private readonly Node _root = new();
+    private const int Root = 0;
+    private const int FreeMarker = -2;
+    private const int StackFoldLimit = 256;
+
+    private Node[] _nodes = new Node[16];
+    private int _nodeCount = 1; // Index 0 is the root, which has an empty label.
+    private int _freeHead = -1;
+
+    private char[] _labels = new char[64];
+    private int _labelLength;
+    private int _liveLabelChars;
+
     private int _count;
     private int _version;
+
+    /// <summary>Creates an empty trie.</summary>
+    /// <param name="ignoreCase">
+    /// <see langword="true"/> to treat keys that differ only in case as the same key (ordinal-ignore-case, like
+    /// <see cref="StringComparer.OrdinalIgnoreCase"/>). Enumerated keys keep the casing they were first added with.
+    /// </param>
+    public Trie(bool ignoreCase = false)
+    {
+        IgnoreCase = ignoreCase;
+        _nodes[Root].Parent = -1;
+    }
+
+    /// <summary>Gets whether keys are compared ignoring case.</summary>
+    public bool IgnoreCase { get; }
 
     /// <summary>Gets the number of keys in the trie.</summary>
     public int Count => _count;
@@ -28,31 +64,66 @@ public sealed class Trie<TValue> : IReadOnlyDictionary<string, TValue>
     /// <summary>Gets whether the trie has no keys.</summary>
     public bool IsEmpty => _count == 0;
 
-    /// <summary>Gets all keys, in ordinal order.</summary>
+    /// <summary>Gets all keys, in key order.</summary>
     public IEnumerable<string> Keys => this.Select(static pair => pair.Key);
 
-    /// <summary>Gets all values, in the ordinal order of their keys.</summary>
+    /// <summary>Gets all values, in the order of their keys.</summary>
     public IEnumerable<TValue> Values => this.Select(static pair => pair.Value);
 
     /// <summary>Gets or sets the value for <paramref name="key"/>. Setting adds the key or replaces its value.</summary>
+    /// <param name="key">The key.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="key"/> is <see langword="null"/>.</exception>
+    /// <exception cref="KeyNotFoundException">Getting a key that isn't in the trie.</exception>
+    public TValue this[string key]
+    {
+        get
+        {
+            ArgumentNullException.ThrowIfNull(key);
+            return this[key.AsSpan()];
+        }
+
+        set
+        {
+            ArgumentNullException.ThrowIfNull(key);
+            Insert(key, key, value, overwrite: true);
+        }
+    }
+
+    /// <summary>
+    /// Gets or sets the value for <paramref name="key"/>. Setting adds the key or replaces its value; adding a new
+    /// key from a span allocates its string.
+    /// </summary>
     /// <param name="key">The key.</param>
     /// <exception cref="KeyNotFoundException">Getting a key that isn't in the trie.</exception>
     public TValue this[ReadOnlySpan<char> key]
     {
         get
         {
-            Node? node = FindNode(key);
-            if (node is not { HasValue: true })
+            int node = FindExact(key);
+            if (node < 0 || _nodes[node].Key is null)
             {
                 throw new KeyNotFoundException($"The key '{key}' was not found.");
             }
 
-            return node.Value;
+            return _nodes[node].Value;
         }
-        set => Insert(key, value, overwrite: true);
+
+        set => Insert(key, null, value, overwrite: true);
     }
 
-    TValue IReadOnlyDictionary<string, TValue>.this[string key] => this[key];
+    /// <summary>Adds <paramref name="key"/> with <paramref name="value"/>.</summary>
+    /// <param name="key">The key.</param>
+    /// <param name="value">The value.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="key"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">The key is already in the trie.</exception>
+    public void Add(string key, TValue value)
+    {
+        ArgumentNullException.ThrowIfNull(key);
+        if (!Insert(key, key, value, overwrite: false))
+        {
+            throw new ArgumentException($"An item with the key '{key}' has already been added.", nameof(key));
+        }
+    }
 
     /// <summary>Adds <paramref name="key"/> with <paramref name="value"/>.</summary>
     /// <param name="key">The key.</param>
@@ -60,7 +131,7 @@ public sealed class Trie<TValue> : IReadOnlyDictionary<string, TValue>
     /// <exception cref="ArgumentException">The key is already in the trie.</exception>
     public void Add(ReadOnlySpan<char> key, TValue value)
     {
-        if (!Insert(key, value, overwrite: false))
+        if (!Insert(key, null, value, overwrite: false))
         {
             throw new ArgumentException($"An item with the key '{key}' has already been added.", nameof(key));
         }
@@ -70,7 +141,18 @@ public sealed class Trie<TValue> : IReadOnlyDictionary<string, TValue>
     /// <param name="key">The key.</param>
     /// <param name="value">The value.</param>
     /// <returns><see langword="true"/> if the key was added; <see langword="false"/> if it already existed.</returns>
-    public bool TryAdd(ReadOnlySpan<char> key, TValue value) => Insert(key, value, overwrite: false);
+    /// <exception cref="ArgumentNullException"><paramref name="key"/> is <see langword="null"/>.</exception>
+    public bool TryAdd(string key, TValue value)
+    {
+        ArgumentNullException.ThrowIfNull(key);
+        return Insert(key, key, value, overwrite: false);
+    }
+
+    /// <summary>Adds <paramref name="key"/> with <paramref name="value"/> unless the key is already present.</summary>
+    /// <param name="key">The key.</param>
+    /// <param name="value">The value.</param>
+    /// <returns><see langword="true"/> if the key was added; <see langword="false"/> if it already existed.</returns>
+    public bool TryAdd(ReadOnlySpan<char> key, TValue value) => Insert(key, null, value, overwrite: false);
 
     /// <summary>Gets the value for <paramref name="key"/>.</summary>
     /// <param name="key">The key.</param>
@@ -80,10 +162,10 @@ public sealed class Trie<TValue> : IReadOnlyDictionary<string, TValue>
     /// </returns>
     public bool TryGetValue(ReadOnlySpan<char> key, [MaybeNullWhen(false)] out TValue value)
     {
-        Node? node = FindNode(key);
-        if (node is { HasValue: true })
+        int node = FindExact(key);
+        if (node >= 0 && _nodes[node].Key is not null)
         {
-            value = node.Value;
+            value = _nodes[node].Value;
             return true;
         }
 
@@ -100,7 +182,11 @@ public sealed class Trie<TValue> : IReadOnlyDictionary<string, TValue>
     /// <summary>Returns whether <paramref name="key"/> is in the trie.</summary>
     /// <param name="key">The key.</param>
     /// <returns><see langword="true"/> if the key is present.</returns>
-    public bool ContainsKey(ReadOnlySpan<char> key) => FindNode(key) is { HasValue: true };
+    public bool ContainsKey(ReadOnlySpan<char> key)
+    {
+        int node = FindExact(key);
+        return node >= 0 && _nodes[node].Key is not null;
+    }
 
     bool IReadOnlyDictionary<string, TValue>.ContainsKey(string key)
     {
@@ -111,270 +197,485 @@ public sealed class Trie<TValue> : IReadOnlyDictionary<string, TValue>
     /// <summary>Returns whether any key starts with <paramref name="prefix"/>.</summary>
     /// <param name="prefix">The prefix. The empty prefix matches if the trie is not empty.</param>
     /// <returns><see langword="true"/> if at least one key starts with the prefix.</returns>
-    public bool ContainsPrefix(ReadOnlySpan<char> prefix)
+    public bool ContainsPrefix(ReadOnlySpan<char> prefix) => _count > 0 && FindPrefix(prefix) >= 0;
+
+    /// <summary>
+    /// Finds the longest key that is a prefix of <paramref name="text"/> — the core operation of tokenizers,
+    /// routers and longest-match dictionaries. The text is not copied or case-folded up front, so it can be the
+    /// whole rest of a large document.
+    /// </summary>
+    /// <param name="text">The text to match at its start.</param>
+    /// <param name="length">The length of the matched key.</param>
+    /// <param name="value">The matched key's value.</param>
+    /// <returns><see langword="true"/> if some key (possibly the empty key) is a prefix of the text.</returns>
+    public bool TryMatchLongestPrefix(ReadOnlySpan<char> text, out int length, [MaybeNullWhen(false)] out TValue value)
     {
-        Node? node = FindNode(prefix);
-        return node is not null && (node.HasValue || node.ChildCount > 0);
+        int best = _nodes[Root].Key is not null ? Root : -1;
+        int bestLength = 0;
+        int node = Root;
+        int i = 0;
+
+        while (i < text.Length)
+        {
+            int slot = FindChildSlot(node, Fold(text[i]));
+            if (slot < 0)
+            {
+                break;
+            }
+
+            int child = _nodes[node].Children![slot];
+            ReadOnlySpan<char> label = Label(child);
+            if (text.Length - i < label.Length || !LabelEquals(text.Slice(i, label.Length), label))
+            {
+                break;
+            }
+
+            i += label.Length;
+            node = child;
+            if (_nodes[node].Key is not null)
+            {
+                best = node;
+                bestLength = i;
+            }
+        }
+
+        if (best < 0)
+        {
+            length = 0;
+            value = default;
+            return false;
+        }
+
+        length = bestLength;
+        value = _nodes[best].Value;
+        return true;
     }
 
-    /// <summary>Removes <paramref name="key"/> and frees nodes no longer used by other keys.</summary>
+    /// <summary>Removes <paramref name="key"/>, merging nodes that are no longer needed.</summary>
     /// <param name="key">The key.</param>
     /// <returns><see langword="true"/> if the key was removed; <see langword="false"/> if it wasn't present.</returns>
     public bool Remove(ReadOnlySpan<char> key)
     {
-        // Remember the deepest node that must survive (it has a value or another branch); everything below
-        // it on this path exists only for the removed key and can be unlinked in one step.
-        Node node = _root;
-        Node keepNode = _root;
-        int keepIndex = 0;
-
-        for (int i = 0; i < key.Length; i++)
-        {
-            if (node.HasValue || node.ChildCount > 1)
-            {
-                keepNode = node;
-                keepIndex = i;
-            }
-
-            Node? child = node.GetChild(key[i]);
-            if (child is null)
-            {
-                return false;
-            }
-
-            node = child;
-        }
-
-        if (!node.HasValue)
+        int node = FindExact(key);
+        if (node < 0 || _nodes[node].Key is null)
         {
             return false;
         }
 
-        if (node.ChildCount > 0 || key.IsEmpty)
-        {
-            node.HasValue = false;
-            node.Value = default!;
-        }
-        else
-        {
-            keepNode.RemoveChild(key[keepIndex]);
-        }
-
+        ref Node n = ref _nodes[node];
+        n.Key = null;
+        n.Value = default!;
         _count--;
         _version++;
+
+        if (node == Root)
+        {
+            return true;
+        }
+
+        if (n.ChildCount == 0)
+        {
+            int parent = n.Parent;
+            RemoveChildSlot(parent, n.Slot);
+            FreeNode(node);
+            if (parent != Root && _nodes[parent].Key is null && _nodes[parent].ChildCount == 1)
+            {
+                MergeWithOnlyChild(parent);
+            }
+        }
+        else if (n.ChildCount == 1)
+        {
+            MergeWithOnlyChild(node);
+        }
+
+        CompactLabelsIfWasteful();
         return true;
     }
 
     /// <summary>Removes all keys.</summary>
     public void Clear()
     {
-        _root.Clear();
+        Array.Clear(_nodes, 0, _nodeCount);
+        _nodes[Root].Parent = -1;
+        _nodeCount = 1;
+        _freeHead = -1;
+        _labelLength = 0;
+        _liveLabelChars = 0;
         _count = 0;
         _version++;
     }
 
-    /// <summary>Enumerates the keys starting with <paramref name="prefix"/> (including the prefix itself), in ordinal order.</summary>
+    /// <summary>Enumerates the keys starting with <paramref name="prefix"/> (including the prefix itself), in key order.</summary>
     /// <param name="prefix">The prefix.</param>
-    /// <returns>The matching key/value pairs. Enumeration is lazy.</returns>
-    public IEnumerable<KeyValuePair<string, TValue>> EnumeratePrefix(ReadOnlySpan<char> prefix)
-    {
-        Node? node = FindNode(prefix);
-        return node is null ? [] : Enumerate(node, prefix.ToString());
-    }
+    /// <returns>An allocation-free enumerable of the matching key/value pairs.</returns>
+    public PrefixEnumerable EnumeratePrefix(ReadOnlySpan<char> prefix) => new(this, FindPrefix(prefix));
 
-    /// <summary>Enumerates all key/value pairs in ordinal key order.</summary>
-    /// <returns>An enumerator over the pairs.</returns>
-    public IEnumerator<KeyValuePair<string, TValue>> GetEnumerator() => Enumerate(_root, string.Empty).GetEnumerator();
+    /// <summary>Enumerates all key/value pairs in key order.</summary>
+    /// <returns>An allocation-free enumerator.</returns>
+    public Enumerator GetEnumerator() => new(this, Root);
+
+    IEnumerator<KeyValuePair<string, TValue>> IEnumerable<KeyValuePair<string, TValue>>.GetEnumerator() => GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-    private bool Insert(ReadOnlySpan<char> key, TValue value, bool overwrite)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private char Fold(char c) => IgnoreCase ? char.ToUpperInvariant(c) : c;
+
+    // Labels are stored folded, so only the text side needs folding when ignoring case.
+    private bool LabelEquals(ReadOnlySpan<char> text, ReadOnlySpan<char> label) =>
+        IgnoreCase ? text.Equals(label, StringComparison.OrdinalIgnoreCase) : text.SequenceEqual(label);
+
+    private ReadOnlySpan<char> Label(int node) => _labels.AsSpan(_nodes[node].LabelStart, _nodes[node].LabelLength);
+
+    private int FindChildSlot(int node, char c)
     {
-        Node node = _root;
-        foreach (char c in key)
-        {
-            node = node.GetOrAddChild(c);
-        }
-
-        if (node.HasValue)
-        {
-            if (!overwrite)
-            {
-                return false;
-            }
-        }
-        else
-        {
-            node.HasValue = true;
-            _count++;
-        }
-
-        node.Value = value;
-        _version++;
-        return true;
+        ref Node n = ref _nodes[node];
+        return n.ChildCount == 0 ? -1 : n.ChildChars.AsSpan(0, n.ChildCount).IndexOf(c);
     }
 
-    private Node? FindNode(ReadOnlySpan<char> key)
+    /// <summary>The node whose path spells exactly <paramref name="key"/>, or -1.</summary>
+    private int FindExact(ReadOnlySpan<char> key)
     {
-        Node? node = _root;
-        for (int i = 0; i < key.Length && node is not null; i++)
+        int node = Root;
+        int i = 0;
+        while (i < key.Length)
         {
-            node = node.GetChild(key[i]);
+            int slot = FindChildSlot(node, Fold(key[i]));
+            if (slot < 0)
+            {
+                return -1;
+            }
+
+            int child = _nodes[node].Children![slot];
+            ReadOnlySpan<char> label = Label(child);
+            if (key.Length - i < label.Length || !LabelEquals(key.Slice(i, label.Length), label))
+            {
+                return -1;
+            }
+
+            i += label.Length;
+            node = child;
         }
 
         return node;
     }
 
-    private IEnumerable<KeyValuePair<string, TValue>> Enumerate(Node start, string prefix)
+    /// <summary>The topmost node whose subtree holds exactly the keys starting with <paramref name="prefix"/>, or -1.</summary>
+    private int FindPrefix(ReadOnlySpan<char> prefix)
     {
-        int version = _version;
-        if (start.HasValue)
+        int node = Root;
+        int i = 0;
+        while (i < prefix.Length)
         {
-            yield return new(prefix, start.Value);
-            if (version != _version)
+            int slot = FindChildSlot(node, Fold(prefix[i]));
+            if (slot < 0)
             {
-                ThrowHelper.ThrowCollectionModified();
+                return -1;
             }
+
+            int child = _nodes[node].Children![slot];
+            ReadOnlySpan<char> label = Label(child);
+            int remaining = prefix.Length - i;
+            if (remaining < label.Length)
+            {
+                // The prefix ends inside this edge.
+                return LabelEquals(prefix[i..], label[..remaining]) ? child : -1;
+            }
+
+            if (!LabelEquals(prefix.Slice(i, label.Length), label))
+            {
+                return -1;
+            }
+
+            i += label.Length;
+            node = child;
         }
 
-        // Iterative pre-order walk; the key is built up in one buffer instead of allocating per level.
-        var key = new StringBuilder(prefix);
-        var frames = new Stack<(Node Node, int NextChild)>();
-        frames.Push((start, 0));
+        return node;
+    }
 
-        while (frames.TryPop(out (Node Node, int NextChild) frame))
+    private bool Insert(ReadOnlySpan<char> key, string? keyString, TValue value, bool overwrite)
+    {
+        // Uninitialized ([SkipLocalsInit]), so this costs nothing when unused.
+        Span<char> stackBuffer = stackalloc char[StackFoldLimit];
+        char[]? rented = null;
+        scoped ReadOnlySpan<char> folded = key;
+        if (IgnoreCase)
         {
-            if (frame.NextChild < frame.Node.ChildCount)
-            {
-                frames.Push((frame.Node, frame.NextChild + 1));
-                (char c, Node child) = frame.Node.Children![frame.NextChild];
-                key.Append(c);
+            Span<char> buffer = key.Length <= StackFoldLimit
+                ? stackBuffer
+                : (rented = ArrayPool<char>.Shared.Rent(key.Length));
+            buffer = buffer[..key.Length];
+            key.ToUpperInvariant(buffer);
+            folded = buffer;
+        }
 
-                if (child.HasValue)
+        try
+        {
+            int node = FindOrCreateNode(folded);
+            ref Node n = ref _nodes[node];
+            if (n.Key is not null)
+            {
+                if (!overwrite)
                 {
-                    yield return new(key.ToString(), child.Value);
-                    if (version != _version)
-                    {
-                        ThrowHelper.ThrowCollectionModified();
-                    }
+                    return false;
                 }
-
-                frames.Push((child, 0));
             }
-            else if (frames.Count > 0)
+            else
             {
-                // Finished a child subtree: drop its character.
-                key.Length--;
+                n.Key = keyString ?? key.ToString();
+                _count++;
+            }
+
+            n.Value = value;
+            _version++;
+            return true;
+        }
+        finally
+        {
+            if (rented is not null)
+            {
+                ArrayPool<char>.Shared.Return(rented);
             }
         }
     }
 
-    /// <summary>
-    /// A trie node. Children are stored inline as (char, node) pairs in one array sorted by character: one memory
-    /// read per level, enumeration is naturally in order, and leaf nodes allocate no child storage at all.
-    /// </summary>
-    private sealed class Node
+    private int FindOrCreateNode(ReadOnlySpan<char> folded)
     {
-        // Below this many children a linear scan beats binary search.
-        private const int LinearSearchLimit = 8;
+        int node = Root;
+        int i = 0;
+        while (i < folded.Length)
+        {
+            int slot = FindChildSlot(node, folded[i]);
+            if (slot < 0)
+            {
+                int leaf = AllocateNode();
+                int labelStart = AppendLabel(folded[i..]);
+                _nodes[leaf].LabelStart = labelStart;
+                _nodes[leaf].LabelLength = folded.Length - i;
+                _liveLabelChars += folded.Length - i;
+                InsertChild(node, leaf, folded[i]);
+                return leaf;
+            }
 
-        public TValue Value = default!;
-        public bool HasValue;
-        public Child[]? Children;
+            int child = _nodes[node].Children![slot];
+            ReadOnlySpan<char> label = Label(child);
+            int common = folded[i..].CommonPrefixLength(label);
+            if (common == label.Length)
+            {
+                i += common;
+                node = child;
+                continue;
+            }
+
+            // Split the edge: a new middle node takes the shared part of the label.
+            int middle = AllocateNode();
+            ref Node m = ref _nodes[middle];
+            ref Node c = ref _nodes[child];
+            m.LabelStart = c.LabelStart;
+            m.LabelLength = common;
+            c.LabelStart += common;
+            c.LabelLength -= common;
+
+            _nodes[node].Children![slot] = middle;
+            m.Parent = node;
+            m.Slot = slot;
+            m.ChildChars = [_labels[c.LabelStart], default];
+            m.Children = [child, 0];
+            m.ChildCount = 1;
+            c.Parent = middle;
+            c.Slot = 0;
+
+            i += common;
+            node = middle;
+        }
+
+        return node;
+    }
+
+    private int AllocateNode()
+    {
+        if (_freeHead >= 0)
+        {
+            int free = _freeHead;
+            _freeHead = _nodes[free].Slot;
+            _nodes[free] = default;
+            return free;
+        }
+
+        if (_nodeCount == _nodes.Length)
+        {
+            Array.Resize(ref _nodes, _nodes.Length * 2);
+        }
+
+        return _nodeCount++;
+    }
+
+    private void FreeNode(int node)
+    {
+        _liveLabelChars -= _nodes[node].LabelLength;
+        _nodes[node] = default;
+        _nodes[node].Parent = FreeMarker;
+        _nodes[node].Slot = _freeHead;
+        _freeHead = node;
+    }
+
+    private int AppendLabel(ReadOnlySpan<char> chars)
+    {
+        EnsureLabelCapacity(chars.Length);
+        int start = _labelLength;
+        chars.CopyTo(_labels.AsSpan(start));
+        _labelLength += chars.Length;
+        return start;
+    }
+
+    private void EnsureLabelCapacity(int extra)
+    {
+        if (_labelLength + extra > _labels.Length)
+        {
+            Array.Resize(ref _labels, Math.Max(_labels.Length * 2, _labelLength + extra));
+        }
+    }
+
+    private void InsertChild(int parent, int child, char first)
+    {
+        ref Node p = ref _nodes[parent];
+        if (p.ChildChars is null)
+        {
+            p.ChildChars = new char[2];
+            p.Children = new int[2];
+        }
+        else if (p.ChildCount == p.ChildChars.Length)
+        {
+            Array.Resize(ref p.ChildChars, p.ChildCount * 2);
+            Array.Resize(ref p.Children, p.ChildCount * 2);
+        }
+
+        int position = ~p.ChildChars.AsSpan(0, p.ChildCount).BinarySearch(first);
+        Array.Copy(p.ChildChars, position, p.ChildChars, position + 1, p.ChildCount - position);
+        Array.Copy(p.Children!, position, p.Children!, position + 1, p.ChildCount - position);
+        p.ChildChars[position] = first;
+        p.Children![position] = child;
+        p.ChildCount++;
+
+        for (int s = position; s < p.ChildCount; s++)
+        {
+            ref Node sibling = ref _nodes[p.Children[s]];
+            sibling.Parent = parent;
+            sibling.Slot = s;
+        }
+    }
+
+    private void RemoveChildSlot(int parent, int slot)
+    {
+        ref Node p = ref _nodes[parent];
+        p.ChildCount--;
+        Array.Copy(p.ChildChars!, slot + 1, p.ChildChars!, slot, p.ChildCount - slot);
+        Array.Copy(p.Children!, slot + 1, p.Children!, slot, p.ChildCount - slot);
+        for (int s = slot; s < p.ChildCount; s++)
+        {
+            _nodes[p.Children![s]].Slot = s;
+        }
+    }
+
+    /// <summary>Folds a valueless node's only child into it, concatenating their labels.</summary>
+    private void MergeWithOnlyChild(int node)
+    {
+        int child = _nodes[node].Children![0];
+        int nodeLength = _nodes[node].LabelLength;
+        int childLength = _nodes[child].LabelLength;
+
+        EnsureLabelCapacity(nodeLength + childLength);
+        int start = _labelLength;
+        Array.Copy(_labels, _nodes[node].LabelStart, _labels, start, nodeLength);
+        Array.Copy(_labels, _nodes[child].LabelStart, _labels, start + nodeLength, childLength);
+        _labelLength += nodeLength + childLength;
+
+        ref Node n = ref _nodes[node];
+        ref Node c = ref _nodes[child];
+        n.LabelStart = start;
+        n.LabelLength = nodeLength + childLength;
+        n.Key = c.Key;
+        n.Value = c.Value;
+        n.ChildChars = c.ChildChars;
+        n.Children = c.Children;
+        n.ChildCount = c.ChildCount;
+        for (int s = 0; s < n.ChildCount; s++)
+        {
+            _nodes[n.Children![s]].Parent = node;
+        }
+
+        // The child's characters now live in the node's new label: don't count them as freed.
+        c.LabelLength = 0;
+        FreeNode(child);
+    }
+
+    // Labels are append-only; once more than half the buffer is dead, rewrite it with only the live labels.
+    private void CompactLabelsIfWasteful()
+    {
+        if (_labelLength <= 64 || _labelLength <= 2 * _liveLabelChars)
+        {
+            return;
+        }
+
+        char[] compacted = new char[Math.Max(64, _liveLabelChars * 2)];
+        int position = 0;
+        for (int i = 1; i < _nodeCount; i++)
+        {
+            ref Node n = ref _nodes[i];
+            if (n.Parent == FreeMarker)
+            {
+                continue;
+            }
+
+            Array.Copy(_labels, n.LabelStart, compacted, position, n.LabelLength);
+            n.LabelStart = position;
+            position += n.LabelLength;
+        }
+
+        _labels = compacted;
+        _labelLength = position;
+    }
+
+    /// <summary>The node after <paramref name="node"/> in pre-order within <paramref name="start"/>'s subtree, or -1.</summary>
+    private int Next(int node, int start)
+    {
+        if (_nodes[node].ChildCount > 0)
+        {
+            return _nodes[node].Children![0];
+        }
+
+        while (node != start)
+        {
+            ref Node n = ref _nodes[node];
+            ref Node parent = ref _nodes[n.Parent];
+            if (n.Slot + 1 < parent.ChildCount)
+            {
+                return parent.Children![n.Slot + 1];
+            }
+
+            node = n.Parent;
+        }
+
+        return -1;
+    }
+
+    private struct Node
+    {
+        // Non-null exactly when this node holds a value; also what enumeration returns, so no key is rebuilt.
+        public string? Key;
+        public TValue Value;
+
+        public int Parent; // -1 for the root, FreeMarker for free nodes.
+        public int Slot;   // Index in the parent's child arrays (next free node, for free nodes).
+
+        // The edge into this node: _labels[LabelStart .. LabelStart + LabelLength), case-folded if IgnoreCase.
+        public int LabelStart;
+        public int LabelLength;
+
+        // First label character of each child, sorted, with the child indices alongside.
+        public char[]? ChildChars;
+        public int[]? Children;
         public int ChildCount;
-
-        public Node? GetChild(char c)
-        {
-            Child[]? children = Children;
-            if (children is null)
-            {
-                return null;
-            }
-
-            int count = ChildCount;
-            if (count <= LinearSearchLimit)
-            {
-                for (int i = 0; i < count; i++)
-                {
-                    if (children[i].Key == c)
-                    {
-                        return children[i].Node;
-                    }
-                }
-
-                return null;
-            }
-
-            int index = IndexOf(children, count, c);
-            return index >= 0 ? children[index].Node : null;
-        }
-
-        public Node GetOrAddChild(char c)
-        {
-            int index = Children is null ? ~0 : IndexOf(Children, ChildCount, c);
-            if (index >= 0)
-            {
-                return Children![index].Node;
-            }
-
-            index = ~index;
-            if (Children is null || ChildCount == Children.Length)
-            {
-                Array.Resize(ref Children, Children is null ? 1 : Children.Length * 2);
-            }
-
-            Array.Copy(Children, index, Children, index + 1, ChildCount - index);
-            var node = new Node();
-            Children[index] = new Child(c, node);
-            ChildCount++;
-            return node;
-        }
-
-        public void RemoveChild(char c)
-        {
-            int index = IndexOf(Children!, ChildCount, c);
-            Debug.Assert(index >= 0, "RemoveChild is only called for existing children.");
-
-            ChildCount--;
-            Array.Copy(Children!, index + 1, Children!, index, ChildCount - index);
-            Children![ChildCount] = default;
-        }
-
-        public void Clear()
-        {
-            Value = default!;
-            HasValue = false;
-            Children = null;
-            ChildCount = 0;
-        }
-
-        /// <summary>Binary search by key; returns the index, or the bitwise complement of the insertion point.</summary>
-        private static int IndexOf(Child[] children, int count, char c)
-        {
-            int low = 0;
-            int high = count - 1;
-            while (low <= high)
-            {
-                int middle = (int)((uint)(low + high) >> 1);
-                char key = children[middle].Key;
-                if (key == c)
-                {
-                    return middle;
-                }
-
-                if (key < c)
-                {
-                    low = middle + 1;
-                }
-                else
-                {
-                    high = middle - 1;
-                }
-            }
-
-            return ~low;
-        }
     }
-
-    private readonly record struct Child(char Key, Node Node);
 }
