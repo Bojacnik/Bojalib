@@ -14,3 +14,4 @@
 *.dll  binary
 *.nupkg binary
 *.snupkg binary
+*.bin  binary
