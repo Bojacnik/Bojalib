@@ -69,6 +69,122 @@ public class RoaringBitmapTests
         }, iter: 60);
     }
 
+    // Each chunk is filled at its own density, so the bitmaps mix array (sparse) and bitmap (dense) containers.
+    private static SortedSet<uint> DenseSample(Random random, params double[] densities)
+    {
+        var values = new SortedSet<uint>();
+        for (int chunk = 0; chunk < densities.Length; chunk++)
+        {
+            for (uint low = 0; low < 65536; low++)
+            {
+                if (random.NextDouble() < densities[chunk])
+                {
+                    values.Add(((uint)chunk << 16) | low);
+                }
+            }
+        }
+
+        return values;
+    }
+
+    [Test]
+    public void DenseAndSparseContainers_AllOperationsMatchModel()
+    {
+        var random = new Random(11);
+        double[][] mixes = [[0.02, 0.1, 0.5, 0.9], [0.9, 0.02, 0.2, 0.0], [0.0, 0.5, 0.03, 0.6]];
+        foreach (double[] mixA in mixes)
+        {
+            foreach (double[] mixB in mixes)
+            {
+                SortedSet<uint> a = DenseSample(random, mixA);
+                SortedSet<uint> b = DenseSample(random, mixB);
+                var left = new RoaringBitmap(a);
+                var right = new RoaringBitmap(b);
+
+                (left | right).Should().Equal(a.Union(b).Order());
+                (left & right).Should().Equal(a.Intersect(b).Order());
+                (left ^ right).Should().Equal(a.Except(b).Union(b.Except(a)).Order());
+                (left - right).Should().Equal(a.Except(b).Order());
+                (right - left).Should().Equal(b.Except(a).Order());
+            }
+        }
+    }
+
+    [Test]
+    public void DenseContainers_RankSelectMinMaxAndShrinkingBackToArrays()
+    {
+        var random = new Random(12);
+        SortedSet<uint> model = DenseSample(random, 0.5, 0.0, 0.08, 0.95);
+        var bitmap = new RoaringBitmap(model);
+        uint[] sorted = [.. model];
+
+        bitmap.Min.Should().Be(sorted[0]);
+        bitmap.Max.Should().Be(sorted[^1]);
+        foreach (int index in (int[])[0, 1, 17, 4095, 4096, 20_000, sorted.Length / 2, sorted.Length - 1])
+        {
+            bitmap.Select(index).Should().Be(sorted[index]);
+            bitmap.Rank(sorted[index]).Should().Be(index + 1);
+        }
+
+        bitmap.Rank(sorted[0] - 1 + 1).Should().Be(1);
+        bitmap.Equals(new RoaringBitmap(model)).Should().BeTrue();
+        bitmap.ToBytes().Length.Should().Be(bitmap.SerializedSize);
+        RoaringBitmap.FromBytes(bitmap.ToBytes()).Should().Equal(sorted);
+
+        // Remove most values: dense containers turn back into arrays and empty ones disappear.
+        foreach (uint value in sorted)
+        {
+            if (random.Next(10) != 0)
+            {
+                bitmap.Remove(value).Should().BeTrue();
+                model.Remove(value);
+            }
+        }
+
+        bitmap.Should().Equal(model);
+        bitmap.Count.Should().Be(model.Count);
+        bitmap.Max.Should().Be(model.Max);
+        bitmap.Equals(new RoaringBitmap(model.Take(model.Count - 1))).Should().BeFalse();
+        var differentValues = new RoaringBitmap(model.Select(static v => v ^ 1));
+        bitmap.Equals(differentValues).Should().Be(false);
+
+        foreach (uint value in model.ToArray())
+        {
+            bitmap.Remove(value);
+        }
+
+        bitmap.IsEmpty.Should().BeTrue();
+    }
+
+    [Test]
+    public void CorruptInput_IsRejected()
+    {
+        byte[] good = new RoaringBitmap([1, 70_000, 200_000]).ToBytes();
+
+        byte[] tooManyContainers = [.. good];
+        BitConverter.TryWriteBytes(tooManyContainers.AsSpan(4), 70_000);
+        FluentActions.Invoking(() => RoaringBitmap.FromBytes(tooManyContainers)).Should().Throw<ArgumentException>();
+
+        byte[] keysOutOfOrder = [.. good];
+        keysOutOfOrder[8 + 4] = 0; // second container's key becomes 0, not greater than the first
+        FluentActions.Invoking(() => RoaringBitmap.FromBytes(keysOutOfOrder)).Should().Throw<ArgumentException>();
+
+        byte[] unsortedArray = new RoaringBitmap([1, 2]).ToBytes();
+        (unsortedArray[^4], unsortedArray[^2]) = (unsortedArray[^2], unsortedArray[^4]);
+        FluentActions.Invoking(() => RoaringBitmap.FromBytes(unsortedArray)).Should().Throw<ArgumentException>();
+
+        // Hand-made run-container file: one container (key 0) holding a run that runs past the end of the chunk.
+        byte[] badRun =
+        [
+            0x3B, 0x30, 0x00, 0x00, // cookie 12347, one container
+            0x01,                   // container 0 is a run container
+            0x00, 0x00, 0x09, 0x00, // key 0, cardinality - 1 = 9
+            0x01, 0x00,             // one run
+            0xFE, 0xFF, 0x09, 0x00, // start 65534, length - 1 = 9: past 65535
+        ];
+        FluentActions.Invoking(() => RoaringBitmap.FromBytes(badRun)).Should().Throw<ArgumentException>();
+    }
+
     [Test]
     public void AddRange_SetsEveryValueAcrossChunks()
     {

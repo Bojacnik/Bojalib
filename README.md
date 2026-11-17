@@ -19,11 +19,13 @@ dotnet add package Bojalib
 | `Bojalib.Sorting` | `QuickSort` | Fastest single-threaded sort: pdqsort with AVX-512 / AVX2 / NEON partitioning |
 | | `ParallelSort` | Multithreaded sample sort for large arrays |
 | | `RadixSort` | Integers of any width, O(n) |
+| | `StringSort` | Ordinal string sort (multikey quicksort) |
 | | `MergeSort` | Stable, adaptive (TimSort-style) |
 | | `HeapSort`, `InsertionSort`, `BubbleSort` | Classic algorithms, same API |
 | | `Selection` | n-th element (median, percentiles) and partial sort (top-k) without a full sort |
 | | `SortedSpan` | Branchless `LowerBound` / `UpperBound` / `EqualRange`, SIMD `IsSorted` |
 | `Bojalib.Collections` | `BTreeDictionary<TKey, TValue>`, `BTreeSet<T>` | Sorted collections with O(log n) "i-th item" and rank queries |
+| | `RoaringBitmap` | Compressed set of `uint` IDs with fast union/intersection; standard Roaring format |
 | | `Trie<TValue>` | Prefix queries, longest-prefix match, wildcard and fuzzy (edit-distance) search |
 | | `IndexedPriorityQueue<TKey, TPriority>` | Priority queue with O(log n) `UpdatePriority` / `Remove` (Dijkstra, A*) |
 | | `Deque<T>` | Double-ended queue with O(1) indexing (.NET has none) |
@@ -36,6 +38,8 @@ dotnet add package Bojalib
 | | `BinaryFuseFilter<T>` | Set membership for a fixed set: ~30% smaller than Bloom |
 | | `HyperLogLog<T>` | Count distinct items in a few KB |
 | | `CountMinSketch<T>` | Approximate frequency of each item in a stream |
+| | `TopK<T>` | The most frequent items in a stream, with error bounds (Space-Saving) |
+| | `TDigest` | Streaming quantiles (p50, p99, p99.9) in a few KB, mergeable |
 
 ## Sorting
 
@@ -51,6 +55,7 @@ QuickSort.Sort(keys.AsSpan(), values.AsSpan());            // sort values by key
 ParallelSort.Sort(hugeArray);                              // all cores
 MergeSort.Sort(people, byLastName);                        // stable
 RadixSort.Sort<long>(timestamps);                          // O(n) for integers
+StringSort.Sort(names);                                    // ordinal, faster than Array.Sort(StringComparer.Ordinal)
 
 Selection.Select(scores, scores.Length / 2);               // median in O(n)
 Selection.PartialSort(scores, 10);                         // top 10, sorted
@@ -93,6 +98,11 @@ var work = new Deque<Job>();
 work.PushFront(urgent);
 var lastSamples = new CircularBuffer<double>(100);   // keeps the 100 most recent
 
+// Compressed ID sets: segments, permissions, search postings
+RoaringBitmap activeUsers = [.. activeIds], paidUsers = [.. paidIds];
+long activeAndPaid = (activeUsers & paidUsers).Count;
+byte[] saved = activeUsers.ToBytes();                 // readable by Java/Go/C/Rust/Python Roaring libraries
+
 // Calendars, genomic ranges, IP ranges, …
 var bookings = new IntervalTree<DateTime, string>(intervals);
 foreach (var booking in bookings.Query(start, end)) { … }
@@ -112,6 +122,10 @@ var seen = new BloomFilter<string>(expectedItems: 1_000_000, falsePositiveRate: 
 var known = new BinaryFuseFilter<string>(allUrls);                                       // fixed set, ~9 bits/item
 var visitors = new HyperLogLog<string>();                                                // distinct count, 16 KB
 var hits = new CountMinSketch<string>(epsilon: 0.001, delta: 0.01, conservativeUpdate: true);
+var topUrls = new TopK<string>(capacity: 1000);                                           // which items are frequent
+var latency = new TDigest();                                                              // p99 in ~2.5 KB
+latency.Add(elapsedMs);
+double p99 = latency.Quantile(0.99);
 
 byte[] saved = known.ToBytes();   // stable hashing: reload in another process or machine
 ```
@@ -136,6 +150,10 @@ than `QuickSort`.
 `QuickSort` by instruction set (1M ints): AVX-512 29 ms, AVX2 31 ms, 128-bit (NEON/SSE path) 34 ms, scalar 64 ms.
 `QuickSort.Sort(keys, items)` with 1M `int` keys: 42 ms vs 91 ms for `Array.Sort(keys, items)`.
 
+`StringSort` vs `Array.Sort(strings, StringComparer.Ordinal)`, 500K strings: 1.2× on random words, 1.5× on URLs and
+file paths (long shared prefixes). Smaller than the gains reported for C because .NET's ordinal comparison is already
+vectorized.
+
 **`BTreeDictionary<int, int>` vs `SortedDictionary<int, int>`, 1M random keys**
 
 | | `SortedDictionary` | `BTreeDictionary` |
@@ -144,6 +162,9 @@ than `QuickSort`.
 | Look up all | 738 ms | 183 ms |
 | Iterate all | 48.8 ms | 3.4 ms |
 | Rank of a key | O(n) | O(log n) |
+
+**`RoaringBitmap` vs `HashSet<uint>`**, two sets of 2M IDs out of 0–20M: 2.4 MB vs ≈29 MB; intersection 8.6 ms vs
+178 ms; union 3.2 ms vs 250 ms. Single `Contains` calls are 1.6× slower than a hash set's.
 
 **`Trie<int>`, 10,000 random keys, vs `Dictionary<string, int>`**: exact lookups at parity (305 µs vs 290 µs for
 10K lookups, via an internal hash index); prefix search 0.6 µs vs 191 µs for scanning the dictionary.

@@ -35,11 +35,14 @@ Requires .NET 10.
   - `ParallelSort`: multithreaded sample sort over `T[]` / `Memory<T>`.
   - Portable 128-bit SIMD partitioning for ARM64 (NEON) and pre-AVX2 x86.
   - `QuickSort.Sort(keys, items)`: SIMD path (stable) for `int`/`uint`/`float` keys.
-  - `MergeSort` (stable, adaptive), `RadixSort` (any integer type), `HeapSort`, `InsertionSort`.
+  - `MergeSort` (stable, adaptive), `RadixSort` (any integer type), `StringSort` (ordinal multikey quicksort),
+    `HeapSort`, `InsertionSort`.
   - `Selection.Select` / `Selection.PartialSort` (n-th element, top-k).
   - `SortedSpan.LowerBound` / `UpperBound` / `EqualRange` (branchless) and `IsSorted` (SIMD).
   - All sorts take `Span<T>` with `IComparable<T>`, `IComparer<T>` or `Comparison<T>`.
 - **Collections**
+  - `RoaringBitmap`: compressed `uint` sets with SIMD set operations and the standard portable Roaring format
+    (byte-identical to CRoaring; run containers are read).
   - `BTreeDictionary<TKey, TValue>` / `BTreeSet<T>`: order-statistic B+trees with `GetAt`, `IndexOfKey`,
     `CountLessThan`, `RemoveAt`, floor/ceiling and range enumeration.
   - `Trie<TValue>`: a radix tree implementing `IReadOnlyDictionary<string, TValue>`, with a hash index for
@@ -52,7 +55,8 @@ Requires .NET 10.
     node type, given a children function. Pooled stack/queue, no recursion.
   - Collection expressions for `Deque`, `CircularBuffer` and `BTreeSet`.
 - **Probabilistic** (`Bojalib.Probabilistic`): `BloomFilter<T>` (SIMD split-block), `BinaryFuseFilter<T>`,
-  `HyperLogLog<T>`, `CountMinSketch<T>` — all serializable, with stable hashing for strings and primitives.
+  `HyperLogLog<T>`, `CountMinSketch<T>`, `TDigest` (streaming quantiles), `TopK<T>` (Space-Saving heavy hitters) —
+  serializable where it makes sense, with stable hashing for strings and primitives.
 - Trimming and Native AOT compatible.
 
 ### Fixed
