@@ -97,6 +97,19 @@ public class IndexedPriorityQueueTests
     }
 
     [Test]
+    public void UpdatePriority_KeepsOriginalKeyInstance()
+    {
+        var queue = new IndexedPriorityQueue<string, int>(keyComparer: StringComparer.OrdinalIgnoreCase);
+        queue.Enqueue("key", 5);
+
+        queue.UpdatePriority("KEY", 1);
+        queue.EnqueueOrUpdate("Key", 0);
+
+        queue.Should().ContainSingle().Which.Key.Should().Be("key");
+        queue.Dequeue().Should().Be("key");
+    }
+
+    [Test]
     public void Enumeration_ThrowsOnModification()
     {
         var queue = new IndexedPriorityQueue<int, int>();

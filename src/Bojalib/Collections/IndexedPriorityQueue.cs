@@ -99,14 +99,16 @@ public sealed class IndexedPriorityQueue<TKey, TPriority> : IReadOnlyCollection<
             throw new KeyNotFoundException($"The key '{key}' is not in the queue.");
         }
 
-        TPriority old = _heap[position].Priority;
+        // Keep the stored key instance (like Dictionary does), not the one passed in: with a custom key comparer
+        // they can be equal but different.
+        (TKey storedKey, TPriority old) = _heap[position];
         if (Less(priority, old))
         {
-            SiftUp(position, (key, priority));
+            SiftUp(position, (storedKey, priority));
         }
         else
         {
-            SiftDown(position, (key, priority));
+            SiftDown(position, (storedKey, priority));
         }
 
         _version++;
