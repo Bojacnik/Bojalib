@@ -84,6 +84,28 @@ public class TrieSearchTests
     }
 
     [Test]
+    public void IgnoreCase_SurrogatePairs_IndexAndTreeAgree()
+    {
+        // U+10400 and U+10428 are upper/lower case of the same Deseret letter, encoded as surrogate pairs. The trie
+        // folds case per UTF-16 unit, so it treats them as different keys, and its exact-lookup index must agree.
+        const string upper = "\U00010400";
+        const string lower = "\U00010428";
+        var trie = new Trie<int>(ignoreCase: true) { [upper] = 1 };
+
+        trie.ContainsKey(lower).Should().BeFalse();
+        trie.ContainsKey(lower.AsSpan()).Should().BeFalse();
+        trie.ContainsPrefix(lower).Should().BeFalse();
+        trie.TryGetValue(upper, out int value).Should().BeTrue();
+        value.Should().Be(1);
+
+        trie[lower] = 2;
+        trie.Count.Should().Be(2);
+        trie.Remove(upper).Should().BeTrue();
+        trie.ContainsKey(lower).Should().BeTrue();
+        trie.Keys.Should().Equal(lower);
+    }
+
+    [Test]
     public void TryMatchLongestPrefix_MatchesBruteForce()
     {
         Gen.Select(SmallKey.Array[0, 30], Gen.Char['a', 'd'].Array[0, 10].Select(static c => new string(c))).Sample(t =>

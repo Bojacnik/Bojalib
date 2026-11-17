@@ -53,6 +53,13 @@ public class SortBenchmarks
     }
 
     [Benchmark]
+    public void ParallelSort()
+    {
+        _source.CopyTo(_work, 0);
+        Sorting.ParallelSort.Sort(_work);
+    }
+
+    [Benchmark]
     public void HeapSort()
     {
         _source.CopyTo(_work, 0);

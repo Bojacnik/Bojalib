@@ -32,19 +32,27 @@ Requires .NET 10.
   - `QuickSort` is now pattern-defeating quicksort with AVX-512 / AVX2 vectorized partitioning, inlined comparisons,
     SIMD detection of sorted/reversed input and counting sort for 8/16-bit integers — about 2× faster than
     `Span<T>.Sort()` on large random inputs. Also: keys + items overload, generic `TComparer` overload.
+  - `ParallelSort`: multithreaded sample sort over `T[]` / `Memory<T>`.
+  - Portable 128-bit SIMD partitioning for ARM64 (NEON) and pre-AVX2 x86.
+  - `QuickSort.Sort(keys, items)`: SIMD path (stable) for `int`/`uint`/`float` keys.
   - `MergeSort` (stable, adaptive), `RadixSort` (any integer type), `HeapSort`, `InsertionSort`.
   - `Selection.Select` / `Selection.PartialSort` (n-th element, top-k).
   - `SortedSpan.LowerBound` / `UpperBound` / `EqualRange` (branchless) and `IsSorted` (SIMD).
   - All sorts take `Span<T>` with `IComparable<T>`, `IComparer<T>` or `Comparison<T>`.
 - **Collections**
-  - `Trie<TValue>`: a radix tree implementing `IReadOnlyDictionary<string, TValue>`; span lookups; `ignoreCase`;
-    `ContainsPrefix`, `EnumeratePrefix`, `TryMatchLongestPrefix`, `EnumerateMatches` (wildcards),
-    `EnumerateFuzzy` (edit distance); allocation-free enumeration.
-  - `IndexedPriorityQueue<TKey, TPriority>`, `Deque<T>`, `CircularBuffer<T>`, `BloomFilter<T>`,
-    `IntervalTree<TPoint, TValue>`, `DisjointSet` / `DisjointSet<T>`, `LruCache<TKey, TValue>` (single-threaded).
+  - `BTreeDictionary<TKey, TValue>` / `BTreeSet<T>`: order-statistic B+trees with `GetAt`, `IndexOfKey`,
+    `CountLessThan`, `RemoveAt`, floor/ceiling and range enumeration.
+  - `Trie<TValue>`: a radix tree implementing `IReadOnlyDictionary<string, TValue>`, with a hash index for
+    `Dictionary`-speed exact lookups; span lookups; `ignoreCase`; `ContainsPrefix`, `EnumeratePrefix`,
+    `TryMatchLongestPrefix`, `EnumerateMatches` (wildcards), `EnumerateFuzzy` (edit distance); allocation-free
+    enumeration.
+  - `IndexedPriorityQueue<TKey, TPriority>`, `Deque<T>`, `CircularBuffer<T>`, `IntervalTree<TPoint, TValue>`,
+    `DisjointSet` / `DisjointSet<T>`, `LruCache<TKey, TValue>` (single-threaded).
   - `Tree`: `DepthFirst`, `PostOrder`, `BreadthFirst`, `Leaves`, `TryFind`, `TryFindPath`, `Count`, `Height` over any
     node type, given a children function. Pooled stack/queue, no recursion.
-  - Collection expressions for `Deque` and `CircularBuffer`.
+  - Collection expressions for `Deque`, `CircularBuffer` and `BTreeSet`.
+- **Probabilistic** (`Bojalib.Probabilistic`): `BloomFilter<T>` (SIMD split-block), `BinaryFuseFilter<T>`,
+  `HyperLogLog<T>`, `CountMinSketch<T>` — all serializable, with stable hashing for strings and primitives.
 - Trimming and Native AOT compatible.
 
 ### Fixed

@@ -35,7 +35,7 @@ public sealed partial class Trie<TValue>
     {
         ArgumentNullException.ThrowIfNull(word);
         ArgumentOutOfRangeException.ThrowIfNegative(maxDistance);
-        return Fuzzy(IgnoreCase ? word.ToUpperInvariant() : word, maxDistance);
+        return Fuzzy(IgnoreCase ? Fold(word) : word, maxDistance);
     }
 
     private string FoldPattern(string pattern, char wildcard)

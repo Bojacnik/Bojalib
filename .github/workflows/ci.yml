@@ -46,6 +46,11 @@ jobs:
         env:
           DOTNET_EnableAVX512F: 0
 
+      - name: Test without AVX2 (128-bit paths, as used on ARM64)
+        run: dotnet test --project tests/Bojalib.Tests --configuration Release --no-build
+        env:
+          DOTNET_EnableAVX2: 0
+
       - name: Test without SIMD (scalar fallbacks)
         run: dotnet test --project tests/Bojalib.Tests --configuration Release --no-build
         env:

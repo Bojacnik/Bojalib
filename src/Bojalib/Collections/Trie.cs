@@ -3,6 +3,7 @@ using System.Collections;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using Bojalib.Collections.Internal;
 
 namespace Bojalib.Collections;
 
@@ -17,6 +18,12 @@ namespace Bojalib.Collections;
 /// characters, so a lookup visits few nodes. Nodes are structs in one array and labels live in one shared character
 /// buffer, so the whole trie is a handful of objects. Child selection and label comparison use the runtime's
 /// vectorized span search.
+/// </para>
+/// <para>
+/// Exact-key operations (<see cref="TryGetValue(ReadOnlySpan{char}, out TValue)"/>, <see cref="ContainsKey(ReadOnlySpan{char})"/>,
+/// the indexer, <see cref="Remove(string)"/>) go through a hash index of the stored keys, so they run at
+/// <see cref="Dictionary{TKey, TValue}"/> speed; the tree serves prefix, longest-match, wildcard and fuzzy queries.
+/// The index costs roughly one dictionary entry per key (the key strings themselves are shared).
 /// </para>
 /// <para>
 /// Keys are compared ordinally (or ordinal-ignore-case) and enumerated in that order. Lookups take
@@ -43,15 +50,22 @@ public sealed partial class Trie<TValue> : IReadOnlyDictionary<string, TValue>
     private int _count;
     private int _version;
 
+    // Key string -> node holding it, for exact lookups at hash-table speed.
+    private readonly Dictionary<string, int> _index;
+    private readonly Dictionary<string, int>.AlternateLookup<ReadOnlySpan<char>> _lookup;
+
     /// <summary>Creates an empty trie.</summary>
     /// <param name="ignoreCase">
-    /// <see langword="true"/> to treat keys that differ only in case as the same key (ordinal-ignore-case, like
-    /// <see cref="StringComparer.OrdinalIgnoreCase"/>). Enumerated keys keep the casing they were first added with.
+    /// <see langword="true"/> to treat keys that differ only in case as the same key. Each UTF-16 unit is folded with
+    /// <see cref="char.ToUpperInvariant"/> (so letters outside the Basic Multilingual Plane, stored as surrogate pairs,
+    /// compare exactly). Enumerated keys keep the casing they were first added with.
     /// </param>
     public Trie(bool ignoreCase = false)
     {
         IgnoreCase = ignoreCase;
         _nodes[Root].Parent = -1;
+        _index = new Dictionary<string, int>(ignoreCase ? FoldingComparer.Instance : StringComparer.Ordinal);
+        _lookup = _index.GetAlternateLookup<ReadOnlySpan<char>>();
     }
 
     /// <summary>Gets whether keys are compared ignoring case.</summary>
@@ -78,7 +92,9 @@ public sealed partial class Trie<TValue> : IReadOnlyDictionary<string, TValue>
         get
         {
             ArgumentNullException.ThrowIfNull(key);
-            return this[key.AsSpan()];
+            return _index.TryGetValue(key, out int node)
+                ? _nodes[node].Value
+                : throw new KeyNotFoundException($"The key '{key}' was not found.");
         }
 
         set
@@ -98,8 +114,7 @@ public sealed partial class Trie<TValue> : IReadOnlyDictionary<string, TValue>
     {
         get
         {
-            int node = FindExact(key);
-            if (node < 0 || _nodes[node].Key is null)
+            if (!_lookup.TryGetValue(key, out int node))
             {
                 throw new KeyNotFoundException($"The key '{key}' was not found.");
             }
@@ -161,8 +176,7 @@ public sealed partial class Trie<TValue> : IReadOnlyDictionary<string, TValue>
     /// </returns>
     public bool TryGetValue(ReadOnlySpan<char> key, [MaybeNullWhen(false)] out TValue value)
     {
-        int node = FindExact(key);
-        if (node >= 0 && _nodes[node].Key is not null)
+        if (_lookup.TryGetValue(key, out int node))
         {
             value = _nodes[node].Value;
             return true;
@@ -172,25 +186,37 @@ public sealed partial class Trie<TValue> : IReadOnlyDictionary<string, TValue>
         return false;
     }
 
-    bool IReadOnlyDictionary<string, TValue>.TryGetValue(string key, [MaybeNullWhen(false)] out TValue value)
+    /// <summary>Gets the value for <paramref name="key"/>. Faster than the span overload for whole strings.</summary>
+    /// <param name="key">The key.</param>
+    /// <param name="value">The value, or <c>default</c> if the key isn't present.</param>
+    /// <returns><see langword="true"/> if the key is present.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="key"/> is <see langword="null"/>.</exception>
+    public bool TryGetValue(string key, [MaybeNullWhen(false)] out TValue value)
     {
         ArgumentNullException.ThrowIfNull(key);
-        return TryGetValue(key.AsSpan(), out value);
+        if (_index.TryGetValue(key, out int node))
+        {
+            value = _nodes[node].Value;
+            return true;
+        }
+
+        value = default;
+        return false;
     }
 
     /// <summary>Returns whether <paramref name="key"/> is in the trie.</summary>
     /// <param name="key">The key.</param>
     /// <returns><see langword="true"/> if the key is present.</returns>
-    public bool ContainsKey(ReadOnlySpan<char> key)
-    {
-        int node = FindExact(key);
-        return node >= 0 && _nodes[node].Key is not null;
-    }
+    public bool ContainsKey(ReadOnlySpan<char> key) => _lookup.ContainsKey(key);
 
-    bool IReadOnlyDictionary<string, TValue>.ContainsKey(string key)
+    /// <summary>Returns whether <paramref name="key"/> is in the trie. Faster than the span overload for whole strings.</summary>
+    /// <param name="key">The key.</param>
+    /// <returns><see langword="true"/> if the key is present.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="key"/> is <see langword="null"/>.</exception>
+    public bool ContainsKey(string key)
     {
         ArgumentNullException.ThrowIfNull(key);
-        return ContainsKey(key.AsSpan());
+        return _index.ContainsKey(key);
     }
 
     /// <summary>Returns whether any key starts with <paramref name="prefix"/>.</summary>
@@ -253,14 +279,21 @@ public sealed partial class Trie<TValue> : IReadOnlyDictionary<string, TValue>
     /// <summary>Removes <paramref name="key"/>, merging nodes that are no longer needed.</summary>
     /// <param name="key">The key.</param>
     /// <returns><see langword="true"/> if the key was removed; <see langword="false"/> if it wasn't present.</returns>
-    public bool Remove(ReadOnlySpan<char> key)
-    {
-        int node = FindExact(key);
-        if (node < 0 || _nodes[node].Key is null)
-        {
-            return false;
-        }
+    public bool Remove(ReadOnlySpan<char> key) => _lookup.Remove(key, out _, out int node) && RemoveNode(node);
 
+    /// <summary>Removes <paramref name="key"/>, merging nodes that are no longer needed.</summary>
+    /// <param name="key">The key.</param>
+    /// <returns><see langword="true"/> if the key was removed; <see langword="false"/> if it wasn't present.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="key"/> is <see langword="null"/>.</exception>
+    public bool Remove(string key)
+    {
+        ArgumentNullException.ThrowIfNull(key);
+        return _index.Remove(key, out int node) && RemoveNode(node);
+    }
+
+    // Clears the value at `node` (already removed from the index) and prunes or merges nodes.
+    private bool RemoveNode(int node)
+    {
         ref Node n = ref _nodes[node];
         n.Key = null;
         n.Value = default!;
@@ -301,6 +334,7 @@ public sealed partial class Trie<TValue> : IReadOnlyDictionary<string, TValue>
         _labelLength = 0;
         _liveLabelChars = 0;
         _count = 0;
+        _index.Clear();
         _version++;
     }
 
@@ -320,9 +354,41 @@ public sealed partial class Trie<TValue> : IReadOnlyDictionary<string, TValue>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private char Fold(char c) => IgnoreCase ? char.ToUpperInvariant(c) : c;
 
-    // Labels are stored folded, so only the text side needs folding when ignoring case.
-    private bool LabelEquals(ReadOnlySpan<char> text, ReadOnlySpan<char> label) =>
-        IgnoreCase ? text.Equals(label, StringComparison.OrdinalIgnoreCase) : text.SequenceEqual(label);
+    // The single definition of case folding used everywhere in the trie: char.ToUpperInvariant per UTF-16 unit.
+    private static void FoldInto(ReadOnlySpan<char> source, Span<char> destination)
+    {
+        for (int i = 0; i < source.Length; i++)
+        {
+            destination[i] = char.ToUpperInvariant(source[i]);
+        }
+    }
+
+    private static string Fold(string text) => string.Create(text.Length, text, static (span, t) => FoldInto(t, span));
+
+    // Labels are stored folded, so only the text side needs folding when ignoring case. Folding is per UTF-16 unit,
+    // exactly as on insert (OrdinalIgnoreCase would also fold surrogate pairs, and the two must agree).
+    private bool LabelEquals(ReadOnlySpan<char> text, ReadOnlySpan<char> label)
+    {
+        if (text.SequenceEqual(label))
+        {
+            return true;
+        }
+
+        if (!IgnoreCase)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < text.Length; i++)
+        {
+            if (char.ToUpperInvariant(text[i]) != label[i])
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     private ReadOnlySpan<char> Label(int node) => _labels.AsSpan(_nodes[node].LabelStart, _nodes[node].LabelLength);
 
@@ -330,33 +396,6 @@ public sealed partial class Trie<TValue> : IReadOnlyDictionary<string, TValue>
     {
         ref Node n = ref _nodes[node];
         return n.ChildCount == 0 ? -1 : n.ChildChars.AsSpan(0, n.ChildCount).IndexOf(c);
-    }
-
-    /// <summary>The node whose path spells exactly <paramref name="key"/>, or -1.</summary>
-    private int FindExact(ReadOnlySpan<char> key)
-    {
-        int node = Root;
-        int i = 0;
-        while (i < key.Length)
-        {
-            int slot = FindChildSlot(node, Fold(key[i]));
-            if (slot < 0)
-            {
-                return -1;
-            }
-
-            int child = _nodes[node].Children![slot];
-            ReadOnlySpan<char> label = Label(child);
-            if (key.Length - i < label.Length || !LabelEquals(key.Slice(i, label.Length), label))
-            {
-                return -1;
-            }
-
-            i += label.Length;
-            node = child;
-        }
-
-        return node;
     }
 
     /// <summary>The topmost node whose subtree holds exactly the keys starting with <paramref name="prefix"/>, or -1.</summary>
@@ -405,7 +444,7 @@ public sealed partial class Trie<TValue> : IReadOnlyDictionary<string, TValue>
                 ? stackBuffer
                 : (rented = ArrayPool<char>.Shared.Rent(key.Length));
             buffer = buffer[..key.Length];
-            key.ToUpperInvariant(buffer);
+            FoldInto(key, buffer);
             folded = buffer;
         }
 
@@ -423,6 +462,7 @@ public sealed partial class Trie<TValue> : IReadOnlyDictionary<string, TValue>
             else
             {
                 n.Key = keyString ?? key.ToString();
+                _index.Add(n.Key, node);
                 _count++;
             }
 
@@ -596,6 +636,10 @@ public sealed partial class Trie<TValue> : IReadOnlyDictionary<string, TValue>
         n.LabelLength = nodeLength + childLength;
         n.Key = c.Key;
         n.Value = c.Value;
+        if (n.Key is not null)
+        {
+            _index[n.Key] = node; // the key moved up into this node
+        }
         n.ChildChars = c.ChildChars;
         n.Children = c.Children;
         n.ChildCount = c.ChildCount;
