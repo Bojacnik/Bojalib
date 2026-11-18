@@ -108,11 +108,17 @@ public class StressTests
         }
 
         trie.Count.Should().Be(model.Count);
-        trie.Should().Equal(model.OrderBy(static kv => kv.Key, StringComparer.Ordinal));
+
+        // Compare materialized lists: asserting a dictionary-like subject against a lazy, sorted expectation makes the
+        // assertion library re-sort it per element (minutes for ~70K keys).
+        List<KeyValuePair<string, int>> expected = [.. model.OrderBy(static kv => kv.Key, StringComparer.Ordinal)];
+        List<KeyValuePair<string, int>> actual = [.. trie];
+        actual.SequenceEqual(expected).Should().BeTrue("trie contents in ordinal order");
         foreach (string prefix in (string[])["a", "ab", "fed", "cccc"])
         {
-            trie.EnumeratePrefix(prefix).Select(static kv => kv.Key)
-                .Should().Equal(model.Keys.Where(k => k.StartsWith(prefix, StringComparison.Ordinal)).Order(StringComparer.Ordinal));
+            List<string> prefixed = [.. trie.EnumeratePrefix(prefix).Select(static kv => kv.Key)];
+            List<string> expectedPrefixed = [.. model.Keys.Where(k => k.StartsWith(prefix, StringComparison.Ordinal)).Order(StringComparer.Ordinal)];
+            prefixed.Should().Equal(expectedPrefixed);
         }
     }
 
