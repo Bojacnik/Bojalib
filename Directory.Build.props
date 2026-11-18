@@ -1,0 +1,43 @@
+<Project>
+
+  <!-- Shared settings for every project in the repo. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>14</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <!-- Code quality: .NET analyzers at the "recommended" level, code style from .editorconfig enforced in the
+       build, and every warning is an error in Release and on CI. -->
+  <PropertyGroup>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <TreatWarningsAsErrors Condition="'$(Configuration)' == 'Release' Or '$(CI)' == 'true'">true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <!-- Shared NuGet package metadata. The version comes from git tags (MinVer): tag v2.0.0 to build 2.0.0. -->
+  <PropertyGroup>
+    <Authors>Bojacnik</Authors>
+    <Copyright>Copyright (c) 2025 Vít Němec</Copyright>
+    <PackageProjectUrl>https://github.com/Bojacnik/Bojalib</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Bojacnik/Bojalib.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageTags>data-structures;collections;sorting;algorithms;trie;tree;utility</PackageTags>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <MinVerTagPrefix>v</MinVerTagPrefix>
+    <MinVerDefaultPreReleaseIdentifiers>alpha.0</MinVerDefaultPreReleaseIdentifiers>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(IsPackable)' != 'false'">
+    <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" Visible="false" />
+  </ItemGroup>
+
+</Project>

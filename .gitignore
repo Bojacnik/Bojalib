@@ -334,3 +334,21 @@ ASALocalRun/
 .localhistory/
 
 .env
+# Local secrets (copy .env-template to .env)
+.env
+
+# JetBrains Rider / VS Code
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# Symbol packages and coverage output
+*.snupkg
+coverage*.xml
+TestResults/
+
+# OS files
+.DS_Store
+Thumbs.db
+StrykerOutput/

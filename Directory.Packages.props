@@ -1,0 +1,29 @@
+<Project>
+
+  <!-- Central Package Management: versions live here, csproj files reference packages without a Version. -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <!-- Build -->
+  <ItemGroup>
+    <PackageVersion Include="MinVer" Version="8.0.0" />
+  </ItemGroup>
+
+  <!-- Tests -->
+  <ItemGroup>
+    <PackageVersion Include="AwesomeAssertions" Version="9.6.0" />
+    <PackageVersion Include="coverlet.MTP" Version="10.1.1" />
+    <PackageVersion Include="CsCheck" Version="5.0.1" />
+    <PackageVersion Include="NUnit" Version="5.0.0" />
+    <PackageVersion Include="NUnit.Analyzers" Version="4.15.0" />
+    <PackageVersion Include="NUnit3TestAdapter" Version="6.3.1" />
+    <PackageVersion Include="System.IO.Hashing" Version="10.0.15" />
+  </ItemGroup>
+
+  <!-- Benchmarks -->
+  <ItemGroup>
+    <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
+  </ItemGroup>
+
+</Project>

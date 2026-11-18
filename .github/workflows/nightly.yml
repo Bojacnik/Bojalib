@@ -1,0 +1,47 @@
+name: Nightly
+
+# Every night: the long tests (long-tests.yml, which release.yml also requires before publishing).
+# On Sundays it also runs mutation testing (hours), uploading the HTML reports as artifacts.
+on:
+  schedule:
+    - cron: '17 2 * * *'   # long tests, nightly
+    - cron: '23 3 * * 0'   # mutation testing, Sundays
+  workflow_dispatch:
+    inputs:
+      mutation:
+        description: Also run mutation testing
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  long-tests:
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '17 2 * * *'
+    uses: ./.github/workflows/long-tests.yml
+
+  mutation:
+    if: (github.event_name == 'workflow_dispatch' && inputs.mutation) || github.event.schedule == '23 3 * * 0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        area: ['**/Sorting/**/*.cs', '**/Collections/**/*.cs', '**/Probabilistic/**/*.cs', '**/Hashing/**/*.cs']
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - name: Run Stryker.NET
+        run: eng/mutation-test.sh "${{ matrix.area }}" "$PWD/StrykerOutput/report"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: mutation-report-${{ strategy.job-index }}
+          path: StrykerOutput/report/reports/

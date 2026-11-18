@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # MinVer computes the version from git tags.
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore Bojalib.slnx
+
+      - name: Check formatting
+        run: dotnet format Bojalib.slnx --verify-no-changes --no-restore
+
+      - name: Build
+        run: dotnet build Bojalib.slnx --configuration Release --no-restore
+
+      - name: Test (fails below 90% line or branch coverage)
+        run: >
+          dotnet test --project tests/Bojalib.Tests --configuration Release --no-build
+          --coverlet --coverlet-output-format cobertura
+          --coverlet-threshold 90 --coverlet-threshold-type line,branch
+          --coverlet-threshold-stat Total
+
+      # The runner's CPU decides which SIMD paths run by default; force the others too.
+      - name: Test without AVX-512 (AVX2 paths)
+        run: dotnet test --project tests/Bojalib.Tests --configuration Release --no-build
+        env:
+          DOTNET_EnableAVX512F: 0
+
+      - name: Test without AVX2 (128-bit paths, as used on ARM64)
+        run: dotnet test --project tests/Bojalib.Tests --configuration Release --no-build
+        env:
+          DOTNET_EnableAVX2: 0
+
+      - name: Test without SIMD (scalar fallbacks)
+        run: dotnet test --project tests/Bojalib.Tests --configuration Release --no-build
+        env:
+          DOTNET_EnableHWIntrinsic: 0
+
+      - name: Pack
+        run: dotnet pack src/Bojalib --configuration Release --no-build --output artifacts
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: packages
+          path: artifacts/
+
+  native-aot:
+    # Publishes a sample using every public type with Native AOT; any trimming/AOT warning fails the build.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Publish with Native AOT (warnings are errors)
+        run: dotnet publish samples/Bojalib.AotSmoke -c Release -o aot
+
+      - name: Run the native binary
+        run: ./aot/Bojalib.AotSmoke
+
