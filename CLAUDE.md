@@ -13,7 +13,8 @@ See `README.md` for the API, `CONTRIBUTING.md` for layout and conventions, `CHAN
 What exists and where:
 
 - **Scale knob.** `BOJALIB_TEST_SCALE=N` multiplies every CsCheck iteration count (`TestScale.Iterations`) and the
-  stress-test sizes. `.github/workflows/nightly.yml` runs the suite at scale 50 in all four SIMD configurations.
+  stress-test sizes. `.github/workflows/long-tests.yml` runs the suite at scale 50 in all four SIMD configurations.
+  It runs nightly (`nightly.yml`) and before every release: `release.yml` publishes only if all four jobs pass.
 - **Fuzzing.** `Robustness/DeserializerFuzzTests.cs` mutates valid payloads for every `FromBytes`. Each result must
   round-trip or throw `ArgumentException`, within 5 s and 256 MB. It found a real crash in `HyperLogLog.FromBytes`
   (registers out of range), now fixed.

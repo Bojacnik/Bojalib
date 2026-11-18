@@ -1,0 +1,46 @@
+name: Long tests
+
+# Every randomized test with 50x the iterations and 10x the input sizes, on every SIMD path.
+# Reusable: called nightly by nightly.yml and as a required gate by release.yml. Can also be run by hand.
+on:
+  workflow_call:
+    inputs:
+      scale:
+        description: Iteration multiplier (BOJALIB_TEST_SCALE)
+        type: number
+        default: 50
+  workflow_dispatch:
+    inputs:
+      scale:
+        description: Iteration multiplier (BOJALIB_TEST_SCALE)
+        type: number
+        default: 50
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  long-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        simd:
+          - { name: default, env: '' }
+          - { name: avx2, env: 'DOTNET_EnableAVX512F=0' }
+          - { name: vector128, env: 'DOTNET_EnableAVX2=0' }
+          - { name: scalar, env: 'DOTNET_EnableHWIntrinsic=0' }
+    name: long tests (${{ matrix.simd.name }})
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - run: dotnet build Bojalib.slnx -c Release
+      - name: Test at ${{ inputs.scale }}x scale
+        run: env BOJALIB_TEST_SCALE=${{ inputs.scale }} ${{ matrix.simd.env }} dotnet test --project tests/Bojalib.Tests -c Release --no-build

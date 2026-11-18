@@ -1,7 +1,7 @@
 name: Nightly
 
-# Long-running tests: every randomized test with 50x the iterations and 10x the input sizes, on every SIMD path.
-# On Sundays it runs mutation testing instead (hours), uploading the HTML reports as artifacts.
+# Every night: the long tests (long-tests.yml, which release.yml also requires before publishing).
+# On Sundays it also runs mutation testing (hours), uploading the HTML reports as artifacts.
 on:
   schedule:
     - cron: '17 2 * * *'   # long tests, nightly
@@ -23,25 +23,7 @@ env:
 jobs:
   long-tests:
     if: github.event_name == 'workflow_dispatch' || github.event.schedule == '17 2 * * *'
-    runs-on: ubuntu-latest
-    timeout-minutes: 300
-    strategy:
-      fail-fast: false
-      matrix:
-        simd:
-          - { name: default, env: '' }
-          - { name: avx2, env: 'DOTNET_EnableAVX512F=0' }
-          - { name: vector128, env: 'DOTNET_EnableAVX2=0' }
-          - { name: scalar, env: 'DOTNET_EnableHWIntrinsic=0' }
-    name: long tests (${{ matrix.simd.name }})
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-dotnet@v6
-        with:
-          global-json-file: global.json
-      - run: dotnet build Bojalib.slnx -c Release
-      - name: Test at 50x scale
-        run: env BOJALIB_TEST_SCALE=50 ${{ matrix.simd.env }} dotnet test --project tests/Bojalib.Tests -c Release --no-build
+    uses: ./.github/workflows/long-tests.yml
 
   mutation:
     if: (github.event_name == 'workflow_dispatch' && inputs.mutation) || github.event.schedule == '23 3 * * 0'
