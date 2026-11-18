@@ -259,6 +259,23 @@ public class RoaringBitmapTests
         RoaringBitmap.FromBytes(bitmap.ToBytes()).Equals(bitmap).Should().BeTrue();
     }
 
+    [TestCase(0)]
+    [TestCase(1)]
+    [TestCase(2)]
+    public void SetOperations_MatchReferenceImplementationByteForByte(int testCase)
+    {
+        string directory = Path.Combine(AppContext.BaseDirectory, "Fixtures", "roaring", "setops");
+        byte[] Read(string name) => File.ReadAllBytes(Path.Combine(directory, $"case{testCase}_{name}.bin"));
+        RoaringBitmap a = RoaringBitmap.FromBytes(Read("a"));
+        RoaringBitmap b = RoaringBitmap.FromBytes(Read("b"));
+
+        (a | b).ToBytes().Should().Equal(Read("or"));
+        (a & b).ToBytes().Should().Equal(Read("and"));
+        (a ^ b).ToBytes().Should().Equal(Read("xor"));
+        (a - b).ToBytes().Should().Equal(Read("andnot"));
+        a.ToBytes().Should().Equal(Read("a"));
+    }
+
     [Test]
     public void InvalidInput_IsRejected()
     {
