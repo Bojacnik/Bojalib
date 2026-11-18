@@ -8,6 +8,8 @@
 #  - the classic VSTest runner (its Microsoft.Testing.Platform runner times out capturing coverage), and
 #  - CsCheck_Threads=1: CsCheck samples on several threads, which Stryker can't attribute to the test, so mutants
 #    it only exercises there would be reported as surviving.
+# Coverage defaults to perTestInIsolation: the faster perTest mode was seen to miss tests that do kill a mutant
+# (verified by hand), so its "survived" list over-reports. Treat survivors as candidates and confirm before acting.
 set -euo pipefail
 
 mutate="${1:?glob of files to mutate, e.g. \"**/Sorting/**/*.cs\"}"
@@ -38,5 +40,5 @@ command -v dotnet-stryker >/dev/null || dotnet tool install -g dotnet-stryker
 export PATH="$PATH:$HOME/.dotnet/tools"
 export CsCheck_Threads=1
 cd "$work/tests/Bojalib.Tests"
-dotnet stryker --mutate "$mutate" --concurrency "${STRYKER_CONCURRENCY:-4}" --reporter html --reporter json --reporter progress --output "$output"
+dotnet stryker --mutate "$mutate" --coverage-analysis "${STRYKER_COVERAGE:-perTestInIsolation}" --concurrency "${STRYKER_CONCURRENCY:-4}" --reporter html --reporter json --reporter progress --output "$output"
 echo "Report: $output/reports/mutation-report.html"

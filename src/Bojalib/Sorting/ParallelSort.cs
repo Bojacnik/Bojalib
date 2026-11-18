@@ -245,18 +245,13 @@ public static class ParallelSort
     private static T[] ChooseSplitters<T, TLess>(ReadOnlySpan<T> items, TLess less, int threads, out int count)
         where TLess : ILess<T>
     {
-        int wanted = Math.Min(MaxSplitters, (threads * 8) - 1);
+        int wanted = SplitterCount(threads);
         int sampleSize = (wanted + 1) * Oversampling;
         T[] sample = ArrayPool<T>.Shared.Rent(sampleSize);
         ulong state = (ulong)items.Length * 0x9E3779B97F4A7C15UL;
         for (int i = 0; i < sampleSize; i++)
         {
-            // SplitMix64: cheap, deterministic, well spread.
-            ulong z = state += 0x9E3779B97F4A7C15UL;
-            z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9UL;
-            z = (z ^ (z >> 27)) * 0x94D049BB133111EBUL;
-            z ^= z >> 31;
-            sample[i] = items[(int)((z >> 32) * (ulong)items.Length >> 32)];
+            sample[i] = items[NextSamplePosition(ref state, items.Length)];
         }
 
         Span<T> sorted = sample.AsSpan(0, sampleSize);
@@ -281,6 +276,31 @@ public static class ParallelSort
 
         ArrayPool<T>.Shared.Return(sample, RuntimeHelpers.IsReferenceOrContainsReferences<T>());
         return splitters;
+    }
+
+    internal static int SplitterCount(int threads) => Math.Min(MaxSplitters, (threads * 8) - 1);
+
+    /// <summary>The positions the splitter sample is drawn from, in order (exposed so tests can build skewed inputs).</summary>
+    internal static int[] SamplePositions(int length, int threads)
+    {
+        int[] positions = new int[(SplitterCount(threads) + 1) * Oversampling];
+        ulong state = (ulong)length * 0x9E3779B97F4A7C15UL;
+        for (int i = 0; i < positions.Length; i++)
+        {
+            positions[i] = NextSamplePosition(ref state, length);
+        }
+
+        return positions;
+    }
+
+    // SplitMix64: cheap, deterministic, well spread.
+    private static int NextSamplePosition(ref ulong state, int length)
+    {
+        ulong z = state += 0x9E3779B97F4A7C15UL;
+        z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9UL;
+        z = (z ^ (z >> 27)) * 0x94D049BB133111EBUL;
+        z ^= z >> 31;
+        return (int)((z >> 32) * (ulong)length >> 32);
     }
 
     /// <summary>
