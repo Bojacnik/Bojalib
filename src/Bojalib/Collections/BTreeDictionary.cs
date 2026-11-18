@@ -105,7 +105,7 @@ public sealed class BTreeDictionary<TKey, TValue> : IReadOnlyDictionary<TKey, TV
     /// <returns><see langword="true"/> if present.</returns>
     public bool TryGetValue(TKey key, [MaybeNullWhen(false)] out TValue value)
     {
-        ArgumentNullException.ThrowIfNull(key);
+        ThrowHelper.ThrowIfNull(key);
         Leaf leaf = FindLeaf(key);
         int index = LowerBound(leaf.Keys, 0, leaf.Count, key);
         if (index < leaf.Count && !Less(key, leaf.Keys[index]))
@@ -134,7 +134,7 @@ public sealed class BTreeDictionary<TKey, TValue> : IReadOnlyDictionary<TKey, TV
     /// <returns><see langword="true"/> if it was present.</returns>
     public bool Remove(TKey key, [MaybeNullWhen(false)] out TValue value)
     {
-        ArgumentNullException.ThrowIfNull(key);
+        ThrowHelper.ThrowIfNull(key);
         if (!RemoveFrom(_root, key, out value))
         {
             return false;
@@ -186,7 +186,7 @@ public sealed class BTreeDictionary<TKey, TValue> : IReadOnlyDictionary<TKey, TV
     /// <returns><see langword="true"/> if there is one.</returns>
     public bool TryGetFloor(TKey key, out KeyValuePair<TKey, TValue> entry)
     {
-        ArgumentNullException.ThrowIfNull(key);
+        ThrowHelper.ThrowIfNull(key);
         Leaf leaf = FindLeaf(key);
         int index = UpperBound(leaf.Keys, 0, leaf.Count, key) - 1;
         if (index < 0)
@@ -216,7 +216,7 @@ public sealed class BTreeDictionary<TKey, TValue> : IReadOnlyDictionary<TKey, TV
     /// <returns>An allocation-free enumerable.</returns>
     public RangeEnumerable EnumerateRange(TKey from, TKey to)
     {
-        ArgumentNullException.ThrowIfNull(to);
+        ThrowHelper.ThrowIfNull(to);
         (Leaf? leaf, int index) = Ceiling(from);
         return new RangeEnumerable(this, leaf, index, to, bounded: true);
     }
@@ -334,7 +334,7 @@ public sealed class BTreeDictionary<TKey, TValue> : IReadOnlyDictionary<TKey, TV
 
     private (Leaf? Leaf, int Index) Ceiling(TKey key)
     {
-        ArgumentNullException.ThrowIfNull(key);
+        ThrowHelper.ThrowIfNull(key);
         Leaf leaf = FindLeaf(key);
         int index = LowerBound(leaf.Keys, 0, leaf.Count, key);
         if (index == leaf.Count)
@@ -366,7 +366,7 @@ public sealed class BTreeDictionary<TKey, TValue> : IReadOnlyDictionary<TKey, TV
 
     private int Rank(TKey key, out bool found)
     {
-        ArgumentNullException.ThrowIfNull(key);
+        ThrowHelper.ThrowIfNull(key);
         int rank = 0;
         Node node = _root;
         while (node is Internal parent)
@@ -388,7 +388,7 @@ public sealed class BTreeDictionary<TKey, TValue> : IReadOnlyDictionary<TKey, TV
 
     private bool Insert(TKey key, TValue value, bool overwrite)
     {
-        ArgumentNullException.ThrowIfNull(key);
+        ThrowHelper.ThrowIfNull(key);
         (Node? right, TKey separator) = InsertInto(_root, key, value, overwrite, out bool added);
         if (right is not null)
         {

@@ -145,8 +145,16 @@ public sealed class HyperLogLog<T>
             throw new ArgumentException("Not a serialized HyperLogLog sketch.", nameof(bytes));
         }
 
+        // A register holds a rank of at most 64 - precision + 1; anything larger is corrupt (and would break Estimate).
+        int maxRank = 64 - bytes[0] + 1;
+        ReadOnlySpan<byte> registers = bytes[1..];
+        if (registers.IndexOfAnyInRange((byte)(maxRank + 1), byte.MaxValue) >= 0)
+        {
+            throw new ArgumentException("Not a valid HyperLogLog sketch (register out of range).", nameof(bytes));
+        }
+
         var sketch = new HyperLogLog<T>(bytes[0], hasher);
-        bytes[1..].CopyTo(sketch._registers);
+        registers.CopyTo(sketch._registers);
         return sketch;
     }
 

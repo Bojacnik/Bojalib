@@ -154,6 +154,11 @@ public class HyperLogLogTests
         FluentActions.Invoking(() => new HyperLogLog<int>(19)).Should().Throw<ArgumentOutOfRangeException>();
         FluentActions.Invoking(() => HyperLogLog<int>.FromBytes([5, 1, 2])).Should().Throw<ArgumentException>();
         FluentActions.Invoking(() => HyperLogLog<int>.FromBytes([])).Should().Throw<ArgumentException>();
+
+        // Regression (found by fuzzing): a register value larger than any real rank used to crash Estimate().
+        byte[] corrupt = new HyperLogLog<int>(4).ToBytes();
+        corrupt[3] = 200;
+        FluentActions.Invoking(() => HyperLogLog<int>.FromBytes(corrupt)).Should().Throw<ArgumentException>();
     }
 }
 
