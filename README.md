@@ -132,42 +132,72 @@ byte[] saved = known.ToBytes();   // stable hashing: reload in another process o
 
 ## Benchmarks
 
-Indicative results on a shared 4-core cloud VM (.NET 10, x64 with AVX-512), best of several runs — expect ±15%
-noise; run `dotnet run -c Release --project benchmarks/Bojalib.Benchmarks` for your own numbers.
+Full BenchmarkDotNet run (default job, v0.15.8) of `benchmarks/Bojalib.Benchmarks` on a shared 4-core cloud VM
+(Intel Xeon 2.1 GHz, x64 with AVX-512, .NET 10). The standard deviation was around 10%, so treat the ratios as
+the result rather than the absolute times. Run `dotnet run -c Release --project benchmarks/Bojalib.Benchmarks` for
+your own numbers.
 
-**Sorting random `int`s**
+**Sorting random `int`s** (time, and ratio to `Span<T>.Sort()`)
 
-| | 1M | 10M |
-|---|---:|---:|
-| `Span<T>.Sort()` (.NET) | 74 ms | 885 ms |
-| `QuickSort` | 30 ms | 323 ms |
-| `ParallelSort` (4 cores) | 18 ms | 161 ms |
-| `RadixSort` | 12 ms | 313 ms |
+| | 100 | 10K | 1M |
+|---|---:|---:|---:|
+| `Span<T>.Sort()` (.NET) | 0.71 µs | 643 µs | 97.6 ms |
+| `QuickSort` | 0.62 µs (0.89) | 322 µs (0.50) | 39.9 ms (0.41) |
+| `RadixSort` | 0.59 µs (0.85) | 157 µs (0.25) | 19.8 ms (0.20) |
+| `ParallelSort` (4 cores) | 0.62 µs (0.89) | 309 µs (0.48) | 32.8 ms (0.34) |
+| `MergeSort` (stable) | 2.0 µs (2.87) | 980 µs (1.53) | 150 ms (1.55) |
+| `HeapSort` | 0.94 µs (1.34) | 938 µs (1.47) | 161 ms (1.65) |
 
-`RadixSort` wins while the data fits in cache; at 10M its scatter passes become memory-bound and it is no faster
-than `QuickSort`.
+None of them allocate, except `ParallelSort` at 1M (13 KB of task bookkeeping). Below 64K elements `ParallelSort`
+is just `QuickSort`. On this shared VM it gained only 1.2× over `QuickSort` at 1M; its scaling on real many-core
+hardware has not been measured yet.
 
-`QuickSort` by instruction set (1M ints): AVX-512 29 ms, AVX2 31 ms, 128-bit (NEON/SSE path) 34 ms, scalar 64 ms.
-`QuickSort.Sort(keys, items)` with 1M `int` keys: 42 ms vs 91 ms for `Array.Sort(keys, items)`.
+**`BTreeDictionary<int, int>` vs `SortedDictionary<int, int>`, 100K random keys**
 
-`StringSort` vs `Array.Sort(strings, StringComparer.Ordinal)`, 500K strings: 1.2× on random words, 1.5× on URLs and
-file paths (long shared prefixes). Smaller than the gains reported for C because .NET's ordinal comparison is already
-vectorized.
+| | `SortedDictionary` | `BTreeDictionary` | Ratio |
+|---|---:|---:|---:|
+| Insert all | 53.6 ms | 15.3 ms | 3.5× faster |
+| Look up all | 26.9 ms | 9.4 ms | 2.9× faster |
+| Iterate all | 2.41 ms | 0.24 ms | 9.9× faster |
+| Memory allocated building it | 4.8 MB | 1.5 MB | 3.3× less |
+| Rank of a key | O(n) | O(log n) | |
 
-**`BTreeDictionary<int, int>` vs `SortedDictionary<int, int>`, 1M random keys**
+**`Trie<int>` vs `Dictionary<string, int>`, 10,000 random keys.** Exact lookups are at parity: 176 µs vs 175 µs for
+10K lookups, through an internal hash index. A prefix search takes 0.14 µs vs 21.6 µs for scanning the dictionary.
 
-| | `SortedDictionary` | `BTreeDictionary` |
-|---|---:|---:|
-| Insert all | 1,135 ms | 231 ms |
-| Look up all | 738 ms | 183 ms |
-| Iterate all | 48.8 ms | 3.4 ms |
-| Rank of a key | O(n) | O(log n) |
+### Ad-hoc measurements
 
-**`RoaringBitmap` vs `HashSet<uint>`**, two sets of 2M IDs out of 0–20M: 2.4 MB vs ≈29 MB; intersection 8.6 ms vs
-178 ms; union 3.2 ms vs 250 ms. Single `Contains` calls are 1.6× slower than a hash set's.
+These come from earlier hand-written timing loops on the same VM, best of several runs, ±15%. They are not part of
+the BenchmarkDotNet suite.
 
-**`Trie<int>`, 10,000 random keys, vs `Dictionary<string, int>`**: exact lookups at parity (305 µs vs 290 µs for
-10K lookups, via an internal hash index); prefix search 0.6 µs vs 191 µs for scanning the dictionary.
+- **10M random `int`s:** `Span<T>.Sort()` 885 ms, `QuickSort` 323 ms, `ParallelSort` 161 ms, `RadixSort` 313 ms.
+  At this size the radix scatter passes are memory-bound.
+- **`QuickSort` by instruction set, 1M `int`s:**
+
+  | Instruction set | Time |
+  |---|---:|
+  | AVX-512 | 29 ms |
+  | AVX2 | 31 ms |
+  | 128-bit (the NEON/SSE path) | 34 ms |
+  | Scalar | 64 ms |
+- **`QuickSort.Sort(keys, items)`, 1M `int` keys:** 42 ms, vs 91 ms for `Array.Sort(keys, items)`.
+- **`StringSort` vs `Array.Sort(strings, StringComparer.Ordinal)`, 500K strings:** 1.2× faster on random words, 1.5×
+  on URLs and file paths, which have long shared prefixes.
+- **`BTreeDictionary` vs `SortedDictionary`, 1M keys:**
+
+  | | `SortedDictionary` | `BTreeDictionary` |
+  |---|---:|---:|
+  | Insert all | 1,135 ms | 231 ms |
+  | Look up all | 738 ms | 183 ms |
+- **`RoaringBitmap` vs `HashSet<uint>`, two sets of 2M IDs out of 0–20M:**
+
+  | | `HashSet<uint>` | `RoaringBitmap` |
+  |---|---:|---:|
+  | Memory | ≈29 MB | 2.4 MB |
+  | Intersection | 178 ms | 8.6 ms |
+  | Union | 250 ms | 3.2 ms |
+
+  A single `Contains` call is 1.6× slower than a hash set's.
 
 ## Building
 
