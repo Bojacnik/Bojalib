@@ -218,7 +218,7 @@ public class BTreeSetTests
                 if (model.Any(x => x <= 250)) floor.Should().Be(model.Where(x => x <= 250).Max());
                 if (model.Any(x => x >= 250)) ceiling.Should().Be(model.Where(x => x >= 250).Min());
             }
-        }, iter: 200);
+        }, iter: TestScale.Iterations(200));
     }
 
     [Test]

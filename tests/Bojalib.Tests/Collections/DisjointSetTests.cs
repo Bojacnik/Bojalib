@@ -39,7 +39,7 @@ public class DisjointSetTests
                     sets.AreConnected(i, j).Should().Be(label[i] == label[j]);
                 }
             }
-        }, iter: 300);
+        }, iter: TestScale.Iterations(300));
     }
 
     [Test]

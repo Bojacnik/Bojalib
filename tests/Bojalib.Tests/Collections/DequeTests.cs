@@ -49,7 +49,7 @@ public class DequeTests
             int[] copy = new int[deque.Count];
             deque.CopyTo(copy);
             copy.Should().Equal(model);
-        }, iter: 500);
+        }, iter: TestScale.Iterations(500));
     }
 
     [Test]
@@ -176,7 +176,7 @@ public class CircularBufferTests
 
             buffer.GetSpans(out ReadOnlySpan<int> first, out ReadOnlySpan<int> second);
             first.ToArray().Concat(second.ToArray()).Should().Equal(model);
-        }, iter: 500);
+        }, iter: TestScale.Iterations(500));
     }
 
     [Test]

@@ -27,6 +27,9 @@
     <File Path="tests/Directory.Build.props" />
     <Project Path="tests/Bojalib.Tests/Bojalib.Tests.csproj" />
   </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/Bojalib.AotSmoke/Bojalib.AotSmoke.csproj" />
+  </Folder>
   <Folder Name="/benchmarks/">
     <File Path="benchmarks/Directory.Build.props" />
     <Project Path="benchmarks/Bojalib.Benchmarks/Bojalib.Benchmarks.csproj" />

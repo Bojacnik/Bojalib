@@ -160,7 +160,7 @@ public class TreeTests
             Tree.BreadthFirst(0, childrenOf).Should().BeEquivalentTo(Pre(0));
             Tree.Height(0, childrenOf).Should().Be(Height(0));
             Tree.Count(0, childrenOf).Should().Be(n);
-        }, iter: 300);
+        }, iter: TestScale.Iterations(300));
     }
 
     [Test]

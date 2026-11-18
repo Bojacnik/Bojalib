@@ -22,7 +22,7 @@ public class XxHash64Tests
             (byte[] data, ulong seed) = t;
             ulong expected = System.IO.Hashing.XxHash64.HashToUInt64(data, (long)seed);
             XxHash64.Hash(data, seed).Should().Be(expected);
-        }, iter: 3000);
+        }, iter: TestScale.Iterations(3000));
     }
 
     [Test]
@@ -46,7 +46,7 @@ public class BloomFilterTests
             }
 
             items.Should().OnlyContain(i => filter.MightContain(i));
-        }, iter: 100);
+        }, iter: TestScale.Iterations(100));
     }
 
     [Test]

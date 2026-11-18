@@ -18,7 +18,7 @@ public class SelectionTests
             array[index].Should().Be(sorted[index]);
             array.Take(index).Should().OnlyContain(x => x <= array[index]);
             array.Skip(index + 1).Should().OnlyContain(x => x >= array[index]);
-        }, iter: 300);
+        }, iter: TestScale.Iterations(300));
     }
 
     [Test]
@@ -73,7 +73,7 @@ public class SelectionTests
             Selection.PartialSort<int>(array, count);
 
             array.Take(count).Should().Equal(expected);
-        }, iter: 300);
+        }, iter: TestScale.Iterations(300));
     }
 
     [Test]

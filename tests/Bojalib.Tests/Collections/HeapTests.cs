@@ -46,7 +46,7 @@ public class IndexedPriorityQueueTests
                     qp.Should().Be(mp);
                 }
             }
-        }, iter: 500);
+        }, iter: TestScale.Iterations(500));
     }
 
     [Test]

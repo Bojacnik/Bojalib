@@ -62,7 +62,7 @@ public class LruCacheTests
 
                 cache.Should().Equal(model.Select(static e => new KeyValuePair<int, int>(e.Key, e.Value)));
             }
-        }, iter: 500);
+        }, iter: TestScale.Iterations(500));
     }
 
     [Test]

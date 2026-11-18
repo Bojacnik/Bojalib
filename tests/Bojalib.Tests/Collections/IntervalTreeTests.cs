@@ -22,7 +22,7 @@ public class IntervalTreeTests
 
             var containing = intervals.Where(i => i.Start <= start && i.End >= start).OrderBy(static i => i.Start).ToList();
             tree.Query(start).Should().Equal(containing);
-        }, iter: 2000);
+        }, iter: TestScale.Iterations(2000));
     }
 
     [Test]

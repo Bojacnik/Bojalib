@@ -259,7 +259,7 @@ public sealed class MergeSortTests : StableSortAlgorithmTests
             MergeSort.Sort(items, static (a, b) => a.Key.CompareTo(b.Key));
 
             items.Should().Equal(expected);
-        }, iter: 200);
+        }, iter: TestScale.Iterations(200));
     }
 }
 

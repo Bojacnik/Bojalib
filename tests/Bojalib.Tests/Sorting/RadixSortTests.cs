@@ -15,7 +15,7 @@ public class RadixSortTests
             RadixSort.Sort<T>(actual);
 
             actual.Should().Equal(expected);
-        }, iter: 100);
+        }, iter: TestScale.Iterations(100));
 
     [Test]
     public void AllIntegerTypes_MatchSortedOrder()

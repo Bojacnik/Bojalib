@@ -23,7 +23,7 @@ public class StringSortTests
         Gen<string?> tight = Gen.Char['a', 'c'].Array[0, 8].Select(static c => (string?)new string(c));
         Gen<string?> anyText = Gen.String.Select(static s => (string?)s);
         Gen<string?> special = Gen.Int[0, 1].Select(static i => i == 0 ? null : string.Empty);
-        Gen.OneOf(tight, anyText, special).Array[0, 600].Sample(AssertMatchesOrdinal, iter: 500);
+        Gen.OneOf(tight, anyText, special).Array[0, 600].Sample(AssertMatchesOrdinal, iter: TestScale.Iterations(500));
     }
 
     [Test]
@@ -71,7 +71,7 @@ public class StringSortTests
             {
                 keys[i].Should().Be(input[items[i]]);
             }
-        }, iter: 300);
+        }, iter: TestScale.Iterations(300));
     }
 
     [Test]

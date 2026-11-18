@@ -1,4 +1,4 @@
-namespace Bojalib.Tests.Robustness;
+namespace Bojalib.Tests;
 
 /// <summary>
 /// Scales randomized tests. Default runs stay fast for CI; set <c>BOJALIB_TEST_SCALE</c> (e.g. 50) for the nightly

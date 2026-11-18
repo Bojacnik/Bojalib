@@ -19,7 +19,7 @@ public class SortedSpanTests
             SortedSpan.LowerBound(t.Sorted, t.Value, Comparer<int>.Default).Should().Be(lower);
             SortedSpan.UpperBound(t.Sorted, t.Value, null).Should().Be(upper);
             SortedSpan.EqualRange(t.Sorted, t.Value, Comparer<int>.Default).Should().Be(new Range(lower, upper));
-        }, iter: 2000);
+        }, iter: TestScale.Iterations(2000));
     }
 
     [Test]
@@ -40,7 +40,7 @@ public class SortedSpanTests
             bool expected = a.Zip(a.Skip(1)).All(static p => p.First <= p.Second);
             SortedSpan.IsSorted<int>(a).Should().Be(expected);
             SortedSpan.IsSorted(a, Comparer<int>.Default).Should().Be(expected);
-        }, iter: 3000);
+        }, iter: TestScale.Iterations(3000));
     }
 
     [Test]

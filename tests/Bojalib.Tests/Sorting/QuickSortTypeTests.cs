@@ -19,20 +19,20 @@ public class QuickSortTypeTests
 
     [Test]
     public void Int32_MatchesRuntimeSort() =>
-        Gen.Int.Array[0, 3000].Sample(AssertSortsLikeRuntime, iter: 300);
+        Gen.Int.Array[0, 3000].Sample(AssertSortsLikeRuntime, iter: TestScale.Iterations(300));
 
     [Test]
     public void Int32_FewDistinctValues_MatchesRuntimeSort() =>
-        Gen.Int[-3, 3].Array[0, 5000].Sample(AssertSortsLikeRuntime, iter: 200);
+        Gen.Int[-3, 3].Array[0, 5000].Sample(AssertSortsLikeRuntime, iter: TestScale.Iterations(200));
 
     [Test]
-    public void UInt32_MatchesRuntimeSort() => Gen.UInt.Array[0, 3000].Sample(AssertSortsLikeRuntime, iter: 200);
+    public void UInt32_MatchesRuntimeSort() => Gen.UInt.Array[0, 3000].Sample(AssertSortsLikeRuntime, iter: TestScale.Iterations(200));
 
     [Test]
-    public void Int64_MatchesRuntimeSort() => Gen.Long.Array[0, 3000].Sample(AssertSortsLikeRuntime, iter: 200);
+    public void Int64_MatchesRuntimeSort() => Gen.Long.Array[0, 3000].Sample(AssertSortsLikeRuntime, iter: TestScale.Iterations(200));
 
     [Test]
-    public void UInt64_MatchesRuntimeSort() => Gen.ULong.Array[0, 3000].Sample(AssertSortsLikeRuntime, iter: 200);
+    public void UInt64_MatchesRuntimeSort() => Gen.ULong.Array[0, 3000].Sample(AssertSortsLikeRuntime, iter: TestScale.Iterations(200));
 
     [Test]
     public void Double_WithNaNAndSpecialValues_MatchesRuntimeSort() =>
@@ -46,7 +46,7 @@ public class QuickSortTypeTests
 
                 // -0.0 and 0.0 compare equal, so compare by value ordering rather than bit patterns.
                 actual.Should().Equal(expected, static (a, b) => a.Equals(b) || (a == 0 && b == 0));
-            }, iter: 200);
+            }, iter: TestScale.Iterations(200));
 
     [Test]
     public void Single_WithNaN_MatchesRuntimeSort() =>
@@ -57,22 +57,22 @@ public class QuickSortTypeTests
             float[] actual = [.. input];
             QuickSort.Sort(actual);
             actual.Should().Equal(expected, static (a, b) => a.Equals(b) || (a == 0 && b == 0));
-        }, iter: 200);
+        }, iter: TestScale.Iterations(200));
 
     [Test]
     public void Bytes_MatchRuntimeSort()
     {
-        Gen.Byte.Array[0, 3000].Sample(AssertSortsLikeRuntime, iter: 100);
-        Gen.SByte.Array[0, 3000].Sample(AssertSortsLikeRuntime, iter: 100);
+        Gen.Byte.Array[0, 3000].Sample(AssertSortsLikeRuntime, iter: TestScale.Iterations(100));
+        Gen.SByte.Array[0, 3000].Sample(AssertSortsLikeRuntime, iter: TestScale.Iterations(100));
     }
 
     [Test]
     public void SixteenBit_SmallAndLarge_MatchRuntimeSort()
     {
-        Gen.Short.Array[0, 3000].Sample(AssertSortsLikeRuntime, iter: 50);
-        Gen.UShort.Array[16_000, 40_000].Sample(AssertSortsLikeRuntime, iter: 5);
-        Gen.Short.Array[16_000, 40_000].Sample(AssertSortsLikeRuntime, iter: 5);
-        Gen.Char.Array[16_000, 40_000].Sample(AssertSortsLikeRuntime, iter: 5);
+        Gen.Short.Array[0, 3000].Sample(AssertSortsLikeRuntime, iter: TestScale.Iterations(50));
+        Gen.UShort.Array[16_000, 40_000].Sample(AssertSortsLikeRuntime, iter: TestScale.Iterations(5));
+        Gen.Short.Array[16_000, 40_000].Sample(AssertSortsLikeRuntime, iter: TestScale.Iterations(5));
+        Gen.Char.Array[16_000, 40_000].Sample(AssertSortsLikeRuntime, iter: TestScale.Iterations(5));
     }
 
     [Test]
@@ -84,7 +84,7 @@ public class QuickSortTypeTests
             string[] actual = [.. input];
             QuickSort.Sort(actual, StringComparer.Ordinal);
             actual.Should().Equal(expected);
-        }, iter: 100);
+        }, iter: TestScale.Iterations(100));
 
     [Test]
     public void DefaultComparerInstance_TakesFastPathAndSorts()
@@ -108,7 +108,7 @@ public class QuickSortTypeTests
 
             sortedKeys.Should().BeInAscendingOrder();
             items.Should().Equal(sortedKeys.Select(k => k * 10));
-        }, iter: 100);
+        }, iter: TestScale.Iterations(100));
     }
 
     [Test]
@@ -149,7 +149,7 @@ public class QuickSortTypeTests
                     items[i - 1].Should().BeLessThan(items[i]);
                 }
             }
-        }, iter: 150);
+        }, iter: TestScale.Iterations(150));
     }
 
     [Test]

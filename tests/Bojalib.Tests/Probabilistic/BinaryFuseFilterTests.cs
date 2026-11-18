@@ -15,7 +15,7 @@ public class BinaryFuseFilterTests
 
             filter.Count.Should().Be(items.Distinct().Count());
             items.Should().OnlyContain(i => filter.MightContain(i));
-        }, iter: 300);
+        }, iter: TestScale.Iterations(300));
     }
 
     [TestCase(8, 0.0020, 0.0060)]

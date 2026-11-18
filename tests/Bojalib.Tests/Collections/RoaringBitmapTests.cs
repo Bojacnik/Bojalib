@@ -40,7 +40,7 @@ public class RoaringBitmapTests
                 bitmap.Select(model.Count / 2).Should().Be(probe);
                 bitmap.Contains(probe).Should().BeTrue();
             }
-        }, iter: 60);
+        }, iter: TestScale.Iterations(60));
     }
 
     [Test]
@@ -66,7 +66,7 @@ public class RoaringBitmapTests
 
             // The inputs aren't modified.
             left.Should().Equal(setA.Order());
-        }, iter: 60);
+        }, iter: TestScale.Iterations(60));
     }
 
     // Each chunk is filled at its own density, so the bitmaps mix array (sparse) and bitmap (dense) containers.

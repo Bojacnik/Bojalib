@@ -63,3 +63,22 @@ jobs:
         with:
           name: packages
           path: artifacts/
+
+  native-aot:
+    # Publishes a sample using every public type with Native AOT; any trimming/AOT warning fails the build.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Publish with Native AOT (warnings are errors)
+        run: dotnet publish samples/Bojalib.AotSmoke -c Release -o aot
+
+      - name: Run the native binary
+        run: ./aot/Bojalib.AotSmoke
+

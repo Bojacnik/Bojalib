@@ -35,7 +35,7 @@ public class TrieSearchTests
                 trie.EnumeratePrefix(prefix).Should().Equal(expected.Where(p => p.Key.StartsWith(prefix, StringComparison.Ordinal)));
                 trie.ContainsPrefix(prefix).Should().Be(expected.Keys.Any(k => k.StartsWith(prefix, StringComparison.Ordinal)));
             }
-        }, iter: 500);
+        }, iter: TestScale.Iterations(500));
     }
 
     [Test]
@@ -67,7 +67,7 @@ public class TrieSearchTests
                 v.Should().Be(expected[key]);
                 trie.ContainsKey(key.ToUpperInvariant()).Should().BeTrue();
             }
-        }, iter: 300);
+        }, iter: TestScale.Iterations(300));
     }
 
     [Test]
@@ -127,7 +127,7 @@ public class TrieSearchTests
                 length.Should().Be(expected.Length);
                 value.Should().Be(expected);
             }
-        }, iter: 2000);
+        }, iter: TestScale.Iterations(2000));
     }
 
     [Test]
@@ -163,7 +163,7 @@ public class TrieSearchTests
                 .Order(StringComparer.Ordinal);
 
             trie.EnumerateMatches(p).Select(static m => m.Key).Should().Equal(expected);
-        }, iter: 2000);
+        }, iter: TestScale.Iterations(2000));
     }
 
     [Test]
@@ -193,7 +193,7 @@ public class TrieSearchTests
                 .ToList();
 
             trie.EnumerateFuzzy(word, max).Select(static m => (m.Key, m.Distance)).Should().Equal(expected);
-        }, iter: 2000);
+        }, iter: TestScale.Iterations(2000));
     }
 
     [Test]
